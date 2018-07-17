@@ -14,9 +14,9 @@ if (!class_exists('ComposerWrapper')) {
         const EXIT_CODE_ERROR_DOWNLOADING_INSTALLER = 2;
         const MSG_ERROR_DOWNLOADING_INSTALLER = 'Error when downloading composer installer';
         const EXIT_CODE_ERROR_INSTALLER_CHECKSUM_MISMATCH = 3;
-        const MSG_ERROR_INSTALLER_CHECKSUM_MISMATCH = 'Invalid installer signature';
+        const MSG_ERROR_INSTALLER_CHECKSUM_MISMATCH = 'Failed to install composer: checksum of composer installer does not match expected checksum';
         const EXIT_CODE_ERROR_WHEN_INSTALLING = 4;
-        const MSG_ERROR_WHEN_INSTALLING = 'Error when installing composer';
+        const MSG_ERROR_WHEN_INSTALLING = 'Error when running composer installer';
         const EXIT_CODE_ERROR_MAKING_EXECUTABLE = 5;
         const MSG_SELF_UPDATE_FAILED = 'composer self-update failed; proceeding with existing';
 
