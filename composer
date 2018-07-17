@@ -58,6 +58,8 @@ if (!class_exists('ComposerWrapper')) {
                 );
             }
 
+            $expectedInstallerHash = trim($expectedInstallerHash);
+
             $installerPathName = $dir . DIRECTORY_SEPARATOR . static::INSTALLER_FILE;
             if (!$this->copy(static::INSTALLER_URL, $installerPathName)) {
                 throw new Exception(

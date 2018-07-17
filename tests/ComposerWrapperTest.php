@@ -213,9 +213,42 @@ class ComposerWrapperTest extends TestCase
     /**
      * @test
      */
+    public function acceptsDownloadedChecksumWithLineFeed()
+    {
+        $this->expectOutputWithShebang('Installer was called and will succeed');
+
+        $dir = __DIR__ . '/installer_success';
+        $installerFile = $dir . DIRECTORY_SEPARATOR . ComposerWrapper::INSTALLER_FILE;
+
+        $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
+            ->setMethods(array('file_get_contents', 'copy', 'unlink'))
+            ->getMock();
+
+        // Real downloaded checksum has an EOL character at the end
+        $mock->expects($this->once())
+            ->method('file_get_contents')
+            ->with(ComposerWrapper::EXPECTED_INSTALLER_CHECKSUM_URL)
+            ->willReturn(hash_file('sha384', $installerFile) . "\n");
+
+        $mock->expects($this->once())
+            ->method('copy')
+            ->with(ComposerWrapper::INSTALLER_URL, $installerFile)
+            ->willReturn(true);
+
+        $mock->expects($this->once())
+            ->method('unlink')
+            ->with($installerFile)
+            ->willReturn(true);
+
+        $mock->installComposer($dir);
+    }
+
+    /**
+     * @test
+     */
     public function throwsOnInstallerFailure()
     {
-        $this->expectOutputWithShebang('Installer was called');
+        $this->expectOutputWithShebang('Installer was called and will return an error');
         $this->expectExceptionCompat('Exception', ComposerWrapper::MSG_ERROR_WHEN_INSTALLING);
 
         $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
