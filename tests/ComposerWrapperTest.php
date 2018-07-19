@@ -386,9 +386,30 @@ class ComposerWrapperTest extends TestCase
         $this->assertEquals($composerLastModified->getTimestamp(), filemtime($file->url()));
     }
 
-    private function runCallsAllRequiredMethods($expectedComposerDir)
+    /**
+     * @test
+     */
+    public function composerExceptionProcessed()
     {
-        $methods = array('ensureInstalled', 'ensureExecutable', 'ensureUpToDate', 'delegate');
+        $root = vfsStream::setup();
+        $composerDir = $root->url();
+        $composer = vfsStream::newFile('composer.phar', 0755);
+        $root->addChild($composer);
+        $expectedExceptionText = 'Expected exception text';
+        $content = sprintf('<?php throw new Exception("%s");', $expectedExceptionText);
+        $composer->setContent($content);
+
+        $this->expectExceptionCompat('Exception', $expectedExceptionText);
+        putenv("COMPOSER_DIR=$composerDir");
+        $this->runCallsAllRequiredMethods($composerDir, false);
+    }
+
+    private function runCallsAllRequiredMethods($expectedComposerDir, $mockDelegate = true)
+    {
+        $methods = array('ensureInstalled', 'ensureExecutable', 'ensureUpToDate');
+        if ($mockDelegate) {
+            $methods[] = 'delegate';
+        }
 
         /** @var MockObject|ComposerWrapper $runnerMock */
         $runnerMock = $this->getMockBuilder(self::WRAPPER_CLASS)
@@ -426,9 +447,14 @@ class ComposerWrapperTest extends TestCase
 
     private function expectOutputWithShebang($output = null)
     {
-        $wrapperFileLines = file(self::fullWrapperPath());
-        $shebang = $wrapperFileLines[0];
+        $shebang = $this->getExpectedShebang();
         $this->expectOutputString($shebang . $output);
+    }
+
+    private function getExpectedShebang()
+    {
+        $wrapperFileLines = file(self::fullWrapperPath());
+        return $wrapperFileLines[0];
     }
 
     private function expectExceptionCompat($class, $message)

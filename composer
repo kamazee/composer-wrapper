@@ -19,6 +19,7 @@ if (!class_exists('ComposerWrapper')) {
         const MSG_ERROR_WHEN_INSTALLING = 'Error when running composer installer';
         const EXIT_CODE_ERROR_MAKING_EXECUTABLE = 5;
         const MSG_SELF_UPDATE_FAILED = 'composer self-update failed; proceeding with existing';
+        const EXIT_CODE_COMPOSER_EXCEPTION = 6;
 
         public function file_get_contents()
         {
@@ -188,7 +189,16 @@ if (!class_exists('ComposerWrapper')) {
                 }
             );
 
-            require $filename;
+            try {
+                require $filename;
+            } catch (Exception $e) {
+                \ob_end_flush();
+                throw new Exception(
+                    "Composer exception was thrown: {$e->getMessage()}",
+                    self::EXIT_CODE_COMPOSER_EXCEPTION,
+                    $e
+                );
+            }
 
             \ob_end_flush();
         }
@@ -239,11 +249,7 @@ if ('cli' === \PHP_SAPI && @\realpath($_SERVER['argv'][0]) === __FILE__) {
     try {
         $runner->run();
     } catch (Exception $e) {
-        if (__FILE__ === $e->getFile()) {
-            $runner->showError('ERROR: ' . $e->getMessage());
-            exit($e->getCode());
-        } else {
-            throw $e;
-        }
+        $runner->showError('ERROR: ' . $e->getMessage());
+        exit($e->getCode());
     }
 }
