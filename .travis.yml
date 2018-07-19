@@ -1,0 +1,26 @@
+sudo: false
+language: php
+dist: trusty
+cache:
+  directories:
+    - $HOME/.composer/cache
+php:
+  - 5.4
+  - 5.5
+  - 5.6
+  - 7.0
+  - 7.1
+  - 7.2
+  - nightly
+matrix:
+  include:
+    - php: 5.3
+      dist: precise
+  fast_finish: true
+  allow_failures:
+    - php: nightly
+install:
+  - test -f composer.lock && rm composer.lock || true
+  - ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress
+script:
+  - ./vendor/bin/phpunit
