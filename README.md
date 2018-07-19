@@ -1,4 +1,5 @@
 # Composer Wrapper
+[![Build Status](https://travis-ci.org/kamazee/composer-wrapper.svg?branch=master)](https://travis-ci.org/kamazee/composer-wrapper)
 
 ## What for?
 
