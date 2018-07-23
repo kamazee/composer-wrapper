@@ -1,6 +1,13 @@
 #!/usr/bin/env php
 <?php
 
+/**
+ * This is a wrapper around composer that installs or updates it
+ * and delegates call to it as if composer itself was called.
+ *
+ * For upgrading guide and FAQ check out the README here:
+ * https://github.com/kamazee/composer-wrapper/blob/master/README.md
+ */
 if (!class_exists('ComposerWrapper')) {
     class ComposerWrapper
     {
