@@ -414,7 +414,16 @@ class ComposerWrapperTest extends TestCase
         $this->expectOutputWithShebang("$testScriptPath was executed");
         $wrapper = new ComposerWrapper();
         $exitCode = null;
-        $wrapper->passthru($wrapper->getPhpBinary() . ' ' . escapeshellarg($testScriptPath), $exitCode);
+        $class = new ReflectionClass($wrapper);
+        $method = $class->getMethod('passthru');
+        $method->setAccessible(true);
+        $method->invokeArgs(
+            $wrapper,
+            array(
+                $wrapper::getPhpBinary() . ' ' . escapeshellarg($testScriptPath),
+                &$exitCode
+            )
+        );
         $this->assertEquals(1, $exitCode);
     }
 

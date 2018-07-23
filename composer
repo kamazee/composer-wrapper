@@ -20,27 +20,27 @@ if (!class_exists('ComposerWrapper')) {
         const EXIT_CODE_ERROR_MAKING_EXECUTABLE = 5;
         const MSG_SELF_UPDATE_FAILED = 'composer self-update failed; proceeding with existing';
 
-        public function file_get_contents()
+        protected function file_get_contents()
         {
             return \call_user_func_array('file_get_contents', func_get_args());
         }
 
-        public function copy()
+        protected function copy()
         {
             return \call_user_func_array('copy', func_get_args());
         }
 
-        public function passthru($command, &$exitCode)
+        protected function passthru($command, &$exitCode)
         {
             passthru($command, $exitCode);
         }
 
-        public function unlink()
+        protected function unlink()
         {
             return call_user_func_array('unlink', func_get_args());
         }
 
-        public function getPhpBinary()
+        public static function getPhpBinary()
         {
             if (defined('PHP_BINARY')) {
                 return PHP_BINARY;
