@@ -24,6 +24,13 @@ Done, your colleagues should worry never again about installing composer and kee
 
 `./composer install`, `./composer update`, `./composer dump-autoload`, and other commands you used to should just work as if you had installed composer yourself.
 
+## Configuration
+
+All the configuration is done through [*environment variables*](https://www.digitalocean.com/community/tutorials/how-to-read-and-set-environmental-and-shell-variables-on-a-linux-vps) in order to not interact with composer's CLI parameters. The following environment variables are supported:
+
+* `COMPOSER_UPDATE_FREQ`. Time between checks for updates (defaults to 7 days). This is a [relative time specifier](http://php.net/manual/en/datetime.formats.relative.php) that is fed to [`DateTime::modify`](http://php.net/manual/en/datetime.modify.php). It's chosen because it can be perfectly readable by someone who knows no PHP and doesn't want to (e.g. ops people), and it's recommended to keep it that way, e.g. "5 days", "2 weeks", "1 month".
+* `COMPOSER_DIR`. Directory where composer.phar will be searched for and copied to. Defaults to the directory where the script is located (`__DIR__`); note: *not* the current working directory! Sometimes it's useful to keep real composer.phar a couple of levels higher up the directory where wrapper is placed, for example, on a CI server: it would help avoid downloading composer afresh for every build.  
+
 ## FAQ
 
 ### It's just in version control, how do I update it?
