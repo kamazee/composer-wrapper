@@ -7,6 +7,8 @@
  *
  * If it breaks, check out newer version or report an issue at
  * https://github.com/kamazee/composer-wrapper
+ *
+ * @version 1.0.0
  */
 if (!class_exists('ComposerWrapper')) {
     class ComposerWrapper
