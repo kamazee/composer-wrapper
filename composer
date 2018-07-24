@@ -89,7 +89,7 @@ if (!class_exists('ComposerWrapper')) {
             \passthru(
                 \sprintf(
                     '%s %s --install-dir=%s',
-                    \escapeshellcmd($this->getPhpBinary()),
+                    \escapeshellcmd(self::getPhpBinary()),
                     \escapeshellarg($installerPathName),
                     \escapeshellarg($dir)
                 ),
