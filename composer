@@ -108,7 +108,7 @@ if (!class_exists('ComposerWrapper')) {
             unset($exitCode);
         }
 
-        public function ensureInstalled($filename)
+        protected function ensureInstalled($filename)
         {
             if (\file_exists($filename)) {
                 return;
@@ -117,7 +117,7 @@ if (!class_exists('ComposerWrapper')) {
             $this->installComposer(dirname($filename));
         }
 
-        public function ensureExecutable($filename)
+        protected function ensureExecutable($filename)
         {
             if (!\file_exists($filename)) {
                 throw new Exception("Can't make $filename executable: it doesn't exist");
@@ -137,7 +137,7 @@ if (!class_exists('ComposerWrapper')) {
             }
         }
 
-        public function ensureUpToDate($filename)
+        protected function ensureUpToDate($filename)
         {
             if (!\file_exists($filename)) {
                 throw new \Exception("Can't run composer self-update for $filename: it doesn't exist");
@@ -184,7 +184,7 @@ if (!class_exists('ComposerWrapper')) {
             }
         }
 
-        public function delegate($filename)
+        protected function delegate($filename)
         {
             \ob_start(
                 function ($buffer) {
