@@ -88,7 +88,7 @@ class ComposerWrapperTest extends TestCase
             ->with($dir)
             ->willReturn(null);
 
-        $mock->ensureInstalled($filename);
+        self::callNonPublic($mock, 'ensureInstalled', array($filename));
     }
 
     /**
@@ -108,7 +108,7 @@ class ComposerWrapperTest extends TestCase
         $mock->expects($this->never())
             ->method('installComposer');
 
-        $mock->ensureInstalled($filename);
+        self::callNonPublic($mock, 'ensureInstalled', array($filename));
     }
 
     /**
@@ -165,7 +165,7 @@ class ComposerWrapperTest extends TestCase
             ->with(ComposerWrapper::INSTALLER_URL, $installerFile)
             ->willReturn(false);
 
-        $mock->installComposer($dir);
+        self::callNonPublic($mock, 'installComposer', array($dir));
     }
 
     /**
@@ -203,7 +203,7 @@ class ComposerWrapperTest extends TestCase
             ->willReturn(true);
 
         try {
-            $mock->installComposer($dir);
+            self::callNonPublic($mock, 'installComposer', array($dir));
         } catch (Exception $e) {
             $this->assertFileNotExists($installerFile);
             throw $e;
@@ -240,7 +240,7 @@ class ComposerWrapperTest extends TestCase
             ->with($installerFile)
             ->willReturn(true);
 
-        $mock->installComposer($dir);
+        self::callNonPublic($mock, 'installComposer', array($dir));
     }
 
     /**
@@ -273,7 +273,7 @@ class ComposerWrapperTest extends TestCase
             ->with($installerFile)
             ->willReturn(true);
 
-        $mock->installComposer($dir);
+        self::callNonPublic($mock, 'installComposer', array($dir));
     }
 
     /**
@@ -291,7 +291,7 @@ class ComposerWrapperTest extends TestCase
         file_put_contents($file, '');
         chmod($file, $permissionsBefore);
         $wrapper = new ComposerWrapper();
-        $wrapper->ensureExecutable($file);
+        self::callNonPublic($wrapper, 'ensureExecutable', array($file));
         // & 0777 grabs last 3 octal values, e.g. 0100644 -> 0644
         $this->assertEquals($expectedPermissionsAfter, fileperms($file) & 0777);
     }
@@ -332,7 +332,7 @@ class ComposerWrapperTest extends TestCase
             ->with("{$file->url()} self-update", $this->anything())
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 0; });
 
-        $wrapper->ensureUpToDate($file->url());
+        self::callNonPublic($wrapper, 'ensureUpToDate', array($file->url()));
         clearstatcache(null, $file->url());
         $this->assertGreaterThanOrEqual($now->getTimestamp(), filemtime($file->url()));
     }
@@ -351,6 +351,8 @@ class ComposerWrapperTest extends TestCase
             ->getMock();
         $wrapper->expects($this->never())
             ->method('passthru');
+
+        self::callNonPublic($wrapper, 'ensureUpToDate', array($file->url()));
     }
 
     /**
@@ -380,7 +382,7 @@ class ComposerWrapperTest extends TestCase
             ->method('showError')
             ->with(ComposerWrapper::MSG_SELF_UPDATE_FAILED);
 
-        $wrapper->ensureUpToDate($file->url());
+        self::callNonPublic($wrapper, 'ensureUpToDate', array($file->url()));
 
         clearstatcache(null, $file->url());
         $this->assertEquals($composerLastModified->getTimestamp(), filemtime($file->url()));
@@ -477,5 +479,13 @@ class ComposerWrapperTest extends TestCase
         } elseif (method_exists($this, 'setExpectedException')) {
             $this->setExpectedException($class, $message);
         }
+    }
+
+    private static function callNonPublic($object, $method, $args)
+    {
+        $method = new ReflectionMethod($object, $method);
+        $method->setAccessible(true);
+
+        return $method->invokeArgs($object, $args);
     }
 }
