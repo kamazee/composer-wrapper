@@ -94,6 +94,31 @@ class ComposerWrapperTest extends TestCase
     /**
      * @test
      */
+    public function installWorksIfPhpIsInDirWithSpaces()
+    {
+        $dirWithSpaces = __DIR__ . '/directory with spaces';
+        $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
+            ->setMethods(array('copy', 'verifyChecksum', 'getPhpBinary', 'unlink'))
+            ->getMock();
+
+        $wrapper->expects($this->once())->method('copy')->willReturn(true);
+        $wrapper->expects($this->once())->method('verifyChecksum');
+        $wrapper->expects($this->once())
+            ->method('getPhpBinary')
+            ->willReturn($dirWithSpaces . '/php');
+        $wrapper->expects($this->once())->method('unlink');
+
+        $installerPathName = $dirWithSpaces . '/composer-setup.php';
+        $this->expectOutputWithShebang(
+            "I was called with $installerPathName --install-dir=$dirWithSpaces"
+        );
+
+        self::callNonPublic($wrapper, 'installComposer', array($dirWithSpaces));
+    }
+
+    /**
+     * @test
+     */
     public function doesntTryToInstallWhenInstalled()
     {
         $vfs = vfsStream::setup();
@@ -117,9 +142,16 @@ class ComposerWrapperTest extends TestCase
      */
     public function throwsOnFailureToDownloadChecksum($downloadResult)
     {
+        /** @var ComposerWrapper|MockObject $mock */
         $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
-            ->setMethods(array('file_get_contents'))
+            ->setMethods(array('file_get_contents', 'copy'))
             ->getMock();
+
+        $installerFile = __DIR__ . '/' . ComposerWrapper::INSTALLER_FILE;
+        $mock->expects($this->once())
+            ->method('copy')
+            ->with(ComposerWrapper::INSTALLER_URL, $installerFile)
+            ->willReturn(true);
 
         $mock->expects($this->once())
             ->method('file_get_contents')
@@ -150,13 +182,11 @@ class ComposerWrapperTest extends TestCase
         );
 
         $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
-            ->setMethods(array('file_get_contents', 'copy'))
+            ->setMethods(array('copy', 'validateChecksum'))
             ->getMock();
 
-        $mock->expects($this->once())
-            ->method('file_get_contents')
-            ->with(ComposerWrapper::EXPECTED_INSTALLER_CHECKSUM_URL)
-            ->willReturn('doesnt_matter_just_not_empty');
+        $mock->expects($this->never())
+            ->method('validateChecksum');
 
         $dir = __DIR__;
         $installerFile = $dir . DIRECTORY_SEPARATOR . ComposerWrapper::INSTALLER_FILE;
@@ -329,12 +359,30 @@ class ComposerWrapperTest extends TestCase
             ->getMock();
         $wrapper->expects($this->once())
             ->method('passthru')
-            ->with("{$file->url()} self-update", $this->anything())
+            ->with("'{$file->url()}' self-update", $this->anything())
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 0; });
 
         self::callNonPublic($wrapper, 'ensureUpToDate', array($file->url()));
         clearstatcache(null, $file->url());
         $this->assertGreaterThanOrEqual($now->getTimestamp(), filemtime($file->url()));
+    }
+
+    /**
+     * @test
+     */
+    public function selfUpdateWorksInDirectoryWithSpaces()
+    {
+        $dirWithSpaces = __DIR__ . '/directory with spaces';
+        putenv('COMPOSER_DIR=' . $dirWithSpaces);
+        putenv('COMPOSER_UPDATE_FREQ=0 seconds');
+        $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
+            ->setMethods(array('showError'))
+            ->getMock();
+
+        $wrapper->expects($this->never())->method('showError');
+        $this->expectOutputWithShebang('I was called with self-update');
+
+        self::callNonPublic($wrapper, 'ensureUpToDate', array($dirWithSpaces . '/composer.phar'));
     }
 
     /**
@@ -376,7 +424,7 @@ class ComposerWrapperTest extends TestCase
             ->getMock();
         $wrapper->expects($this->once())
             ->method('passthru')
-            ->with("{$file->url()} self-update", $this->anything())
+            ->with("'{$file->url()}' self-update", $this->anything())
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 1; });
         $wrapper->expects($this->once())
             ->method('showError')
@@ -443,7 +491,7 @@ class ComposerWrapperTest extends TestCase
         $method->invokeArgs(
             $wrapper,
             array(
-                $wrapper::getPhpBinary() . ' ' . escapeshellarg($testScriptPath),
+                $wrapper->getPhpBinary() . ' ' . escapeshellarg($testScriptPath),
                 &$exitCode
             )
         );
