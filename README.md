@@ -15,8 +15,9 @@ So, if there was a script that checked if composer was there, installed it if it
 ## How To
 
 1. Copy `composer` file from this repository into a directory within your project where "binaries" (well, usually just CLI entry points) reside
-2. Add it to version control
-3. Add `composer.phar` in that directory into version control ignore file
+2. Add execution permissions to `composer` file: `chmod +x composer`
+3. Add `composer` file to version control
+4. Add `composer.phar` in that directory into version control ignore file
 
 Done, your colleagues should worry never again about installing composer and keeping it up to date, and neither should ops team care how it appears on a build server!
 
