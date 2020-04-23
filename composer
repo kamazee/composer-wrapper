@@ -177,7 +177,7 @@ if (!class_exists('ComposerWrapper')) {
 
             if ($mtimePlusFrequency <= $now) {
                 $this->passthru(
-                    \sprintf('%s self-update', \escapeshellarg($filename)),
+                    \sprintf('%s self-update --1', \escapeshellarg($filename)),
                     $exitCode
                 );
 
