@@ -1,4 +1,4 @@
-sudo: false
+os: linux
 language: php
 dist: trusty
 cache:
@@ -12,7 +12,7 @@ php:
   - 7.1
   - 7.2
   - nightly
-matrix:
+jobs:
   include:
     - php: 5.3
       dist: precise
