@@ -342,12 +342,26 @@ class ComposerWrapperTest extends TestCase
      */
     public function triesToSelfUpdateWhenOutdated()
     {
+        $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
+            ->setMethods(array('isUpToDate', 'selfUpdate', 'showError'))
+            ->getMock();
+        $wrapper->expects($this->once())->method('isUpToDate')->willReturn(false);
+        $wrapper->expects($this->once())->method('selfUpdate');
+        $wrapper->expects($this->never())->method('showError');
+
+        self::callNonPublic($wrapper, 'ensureUpToDate', array(__FILE__));
+    }
+
+    /**
+     * @test
+     */
+    public function selfUpdateWorks()
+    {
         if (PHP_VERSION_ID < 50400) {
             $this->markTestSkipped('At least PHP 5.4 is required to use touch() on vfs');
         }
 
         $root = vfsStream::setup();
-
         $now = new DateTime();
         $composerLastModified = new DateTime('-7 days -1 minute');
         $file = vfsStream::newFile('composer.phar', 0755);
@@ -362,9 +376,24 @@ class ComposerWrapperTest extends TestCase
             ->with("'{$file->url()}' self-update", $this->anything())
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 0; });
 
-        self::callNonPublic($wrapper, 'ensureUpToDate', array($file->url()));
+        self::callNonPublic($wrapper, 'selfUpdate', array($file->url()));
         clearstatcache(null, $file->url());
         $this->assertGreaterThanOrEqual($now->getTimestamp(), filemtime($file->url()));
+    }
+
+    /**
+     * @test
+     */
+    public function detectsOutdated()
+    {
+        $root = vfsStream::setup();
+
+        $composerLastModified = new DateTime('-7 days -1 minute');
+        $file = vfsStream::newFile('composer.phar', 0755);
+        $root->addChild($file);
+        $file->lastModified($composerLastModified->getTimestamp());
+
+        $this->assertFalse(self::callNonPublic(self::getInstance(), 'isUpToDate', array($file->url())));
     }
 
     /**
@@ -373,8 +402,6 @@ class ComposerWrapperTest extends TestCase
     public function selfUpdateWorksInDirectoryWithSpaces()
     {
         $dirWithSpaces = __DIR__ . '/directory with spaces';
-        putenv('COMPOSER_DIR=' . $dirWithSpaces);
-        putenv('COMPOSER_UPDATE_FREQ=0 seconds');
         $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
             ->setMethods(array('showError'))
             ->getMock();
@@ -382,7 +409,7 @@ class ComposerWrapperTest extends TestCase
         $wrapper->expects($this->never())->method('showError');
         $this->expectOutputWithShebang('I was called with self-update');
 
-        self::callNonPublic($wrapper, 'ensureUpToDate', array($dirWithSpaces . '/composer.phar'));
+        self::callNonPublic($wrapper, 'selfUpdate', array($dirWithSpaces . '/composer.phar'));
     }
 
     /**
@@ -405,35 +432,57 @@ class ComposerWrapperTest extends TestCase
 
     /**
      * @test
+     * @dataProvider forceVersionsProvider
+     * @param int $version
+     * @param bool $supportsFlags
+     * @param string $flag
+     */
+    public function addsForceVersionFlag($version, $supportsFlags, $flag, $expectError = false)
+    {
+        $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
+            ->setMethods(array('supportsForceVersionFlag', 'touch', 'passthru', 'showError'))
+            ->getMock();
+
+        $wrapper->expects($this->once())->method('supportsForceVersionFlag')->willReturn($supportsFlags);
+        $wrapper->expects($this->once())->method('touch')->willReturn(null);
+        $wrapper->expects($expectError ? $this->once() : $this->never())->method('showError');
+        $self = $this;
+        $wrapper->expects($this->once())->method('passthru')->with()->willReturnCallback(function($command, &$exitCode) use ($self, $flag) {
+            $self->assertStringEndsWith(' self-update' . (null === $flag ? '' : " $flag"), $command);
+            $exitCode = 0;
+        });
+        putenv(ComposerWrapper::ENV_FORCE_VERSION . '=' . $version);
+        self::callNonPublic($wrapper, 'selfUpdate', array(__FILE__));
+    }
+
+    public static function forceVersionsProvider()
+    {
+        return array(
+            'Version 1 with forcing support' => array('version' => 1, 'supportsFlags' => true, 'flag' => '--1'),
+            'Version 2 with forcing support' => array('version' => 2, 'supportsFlags' => true, 'flag' => '--2'),
+            'Version 1 without forcing support' => array('version' => 1, 'supportsFlags' => false, 'flag' => '1.10.5'),
+            'Version 2 without forcing support' => array('version' => 2, 'supportsFlags' => false, 'flag' => null, 'expectError' => true),
+        );
+    }
+
+    /**
+     * @test
      */
     public function printsWarningWhenUpdateFailsToSelfUpdate()
     {
-        if (PHP_VERSION_ID < 50400) {
-            $this->markTestSkipped('At least PHP 5.4 is required to use touch() on vfs');
-        }
-
-        $root = vfsStream::setup();
-
-        $composerLastModified = new DateTime('-7 days -1 minute');
-        $file = vfsStream::newFile('composer.phar', 0755);
-        $root->addChild($file);
-        $file->lastModified($composerLastModified->getTimestamp());
-
+        $file = __FILE__;
         $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
             ->setMethods(array('passthru', 'showError'))
             ->getMock();
         $wrapper->expects($this->once())
             ->method('passthru')
-            ->with("'{$file->url()}' self-update", $this->anything())
+            ->with("'$file' self-update", $this->anything())
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 1; });
         $wrapper->expects($this->once())
             ->method('showError')
             ->with(ComposerWrapper::MSG_SELF_UPDATE_FAILED);
 
-        self::callNonPublic($wrapper, 'ensureUpToDate', array($file->url()));
-
-        clearstatcache(null, $file->url());
-        $this->assertEquals($composerLastModified->getTimestamp(), filemtime($file->url()));
+        self::callNonPublic($wrapper, 'selfUpdate', array($file));
     }
 
     /**
@@ -496,6 +545,52 @@ class ComposerWrapperTest extends TestCase
             )
         );
         $this->assertEquals(1, $exitCode);
+    }
+
+    /**
+     * @test
+     * @dataProvider selfUpdateHelpProvider
+     * @param string $helpOutput
+     * @param array $versions
+     * @param bool $expectedResult
+     */
+    public function detectsSupportForForceVersionFlags($helpOutput, $versions, $expectedResult)
+    {
+        foreach ($versions as $version) {
+            $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
+                ->setMethods(array('getCliCallOutput'))
+                ->getMock();
+
+            $mock->expects($this->once())
+                ->method('getCliCallOutput')
+                ->willReturn($helpOutput);
+
+            $this->assertSame(
+                $expectedResult,
+                self::callNonPublic($mock, 'supportsForceVersionFlag', array('composer', $version))
+            );
+        }
+    }
+
+    public static function selfUpdateHelpProvider()
+    {
+        return array(
+            'without_version_flags' => array(
+                'helpOutput' => file(__DIR__ . '/self-update_help_examples/without_version_flags.txt'),
+                'versions' => array(1, 2),
+                'expectedResult' => false
+            ),
+            'with_version_flags' => array(
+                'helpOutput' => file(__DIR__ . '/self-update_help_examples/with_version_flags.txt'),
+                'versions' => array(1, 2),
+                'expectedResult' => true,
+            ),
+            'with_version_flags_without_3' => array(
+                'helpOutput' => file(__DIR__ . '/self-update_help_examples/with_version_flags.txt'),
+                'versions' => array(3),
+                'expectedResult' => false,
+            ),
+        );
     }
 
     private function load()

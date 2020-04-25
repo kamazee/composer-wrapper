@@ -31,6 +31,7 @@ All the configuration is done through [*environment variables*](https://www.digi
 
 * `COMPOSER_UPDATE_FREQ`. Time between checks for updates (defaults to 7 days). This is a [relative time specifier](http://php.net/manual/en/datetime.formats.relative.php) that is fed to [`DateTime::modify`](http://php.net/manual/en/datetime.modify.php). It's chosen because it can be perfectly readable by someone who knows no PHP and doesn't want to (e.g. ops people), and it's recommended to keep it that way, e.g. "5 days", "2 weeks", "1 month".
 * `COMPOSER_DIR`. Directory where composer.phar will be searched for and copied to. Defaults to the directory where the script is located (`__DIR__`); note: *not* the current working directory! Sometimes it's useful to keep real composer.phar a couple of levels higher up the directory where wrapper is placed, for example, on a CI server: it would help avoid downloading composer afresh for every build.  
+* `COMPOSER_FORCE_MAJOR_VERSION`. When set to either 1 or 2, forces composer to self-update to the most recent version in the specified major branch (1.x or 2.x resprctively).
 
 ## FAQ
 
