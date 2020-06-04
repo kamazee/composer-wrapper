@@ -13,16 +13,17 @@ php:
   - 7.2
   - 7.3
   - 7.4
-  - nightly
 jobs:
   include:
     - php: 5.3
       dist: precise
+    - php: nightly
+      env: COMPOSER_ADDITIONAL_FLAGS=--ignore-platform-reqs
   fast_finish: true
   allow_failures:
     - php: nightly
 install:
   - test -f composer.lock && rm composer.lock || true
-  - ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress
+  - ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress $COMPOSER_ADDITIONAL_FLAGS
 script:
   - ./vendor/bin/phpunit
