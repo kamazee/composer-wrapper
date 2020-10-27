@@ -1,19 +1,17 @@
 <?php
 
+require_once __DIR__ . '/BaseTestCase.php';
+
 use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
+use BaseTestCase as TestCase;
 
 class ComposerWrapperTest extends TestCase
 {
-    const WRAPPER = '../composer';
+
     const WRAPPER_CLASS = 'ComposerWrapper';
     const INSTALLER = '<?php die("This is a stub and should never be executed");';
 
-    private static function fullWrapperPath()
-    {
-        return __DIR__ . '/' . self::WRAPPER;
-    }
 
     private static function getInstance()
     {
@@ -23,8 +21,8 @@ class ComposerWrapperTest extends TestCase
 
     public function setUp()
     {
-        $this->load();
-        $this->assertTrue(class_exists(self::WRAPPER_CLASS));
+        parent::setUp();
+        self::assertTrue(class_exists(self::WRAPPER_CLASS));
     }
 
     /**
@@ -451,7 +449,11 @@ class ComposerWrapperTest extends TestCase
             $self->assertStringEndsWith(' self-update' . (null === $flag ? '' : " $flag"), $command);
             $exitCode = 0;
         });
-        putenv(ComposerWrapper::ENV_FORCE_VERSION . '=' . $version);
+
+        $params = new ComposerWrapperParams();
+        $params->setForceMajorVersion($version);
+        self::setNonPublic($wrapper, 'params', $params);
+
         self::callNonPublic($wrapper, 'selfUpdate', array(__FILE__));
     }
 
@@ -593,24 +595,6 @@ class ComposerWrapperTest extends TestCase
         );
     }
 
-    private function load()
-    {
-        $this->expectOutputWithShebang();
-        return require self::fullWrapperPath();
-    }
-
-    private function expectOutputWithShebang($output = null)
-    {
-        $shebang = $this->getExpectedShebang();
-        $this->expectOutputString($shebang . $output);
-    }
-
-    private function getExpectedShebang()
-    {
-        $wrapperFileLines = file(self::fullWrapperPath());
-        return $wrapperFileLines[0];
-    }
-
     private function expectExceptionCompat($class, $message)
     {
         if (
@@ -624,11 +608,5 @@ class ComposerWrapperTest extends TestCase
         }
     }
 
-    private static function callNonPublic($object, $method, $args)
-    {
-        $method = new ReflectionMethod($object, $method);
-        $method->setAccessible(true);
 
-        return $method->invokeArgs($object, $args);
-    }
 }

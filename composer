@@ -11,6 +11,68 @@
  * @version 1.1.0
  */
 if (!class_exists('ComposerWrapper')) {
+    class ComposerWrapperParams {
+        /**
+         * @var int|false
+         */
+        private $forceMajorVersion = false;
+        private $updateFreq = '7 days';
+
+        public function loadReal()
+        {
+            $this->loadComposerJson();
+            // env variables have the highest priority
+            $this->loadEnv();
+        }
+
+        private function loadEnv()
+        {
+            $this->updateFreq = \getenv(
+                'COMPOSER_UPDATE_FREQ'
+            );
+            $this->forceMajorVersion = \filter_var(
+                \getenv('COMPOSER_FORCE_MAJOR_VERSION'),
+                FILTER_VALIDATE_INT
+            );
+        }
+
+        private function loadComposerJson()
+        {
+            //stub
+        }
+
+        /**
+         * @return bool
+         */
+        public function getForceMajorVersion()
+        {
+            return $this->forceMajorVersion;
+        }
+
+        /**
+         * @param false|int $forceMajorVersion
+         */
+        public function setForceMajorVersion($forceMajorVersion)
+        {
+            $this->forceMajorVersion = $forceMajorVersion;
+        }
+
+        /**
+         * @return string
+         */
+        public function getUpdateFreq()
+        {
+            return $this->updateFreq;
+        }
+
+        /**
+         * @param string $updateFreq
+         */
+        public function setUpdateFreq($updateFreq)
+        {
+            $this->updateFreq = $updateFreq;
+        }
+    }
     class ComposerWrapper
     {
         const COMPOSER_HASHBANG = "#!/usr/bin/env php\n";
@@ -30,7 +92,15 @@ if (!class_exists('ComposerWrapper')) {
         const MSG_SELF_UPDATE_FAILED = 'composer self-update failed; proceeding with existing';
         const EXIT_CODE_COMPOSER_EXCEPTION = 6;
 
-        const ENV_FORCE_VERSION = 'COMPOSER_FORCE_MAJOR_VERSION';
+        /**
+         * @var ComposerWrapperParams
+         */
+        protected $params;
+
+        public function __construct()
+        {
+            $this->params = new ComposerWrapperParams();
+        }
 
         protected function file_get_contents()
         {
@@ -143,13 +213,6 @@ if (!class_exists('ComposerWrapper')) {
             unset($exitCode);
         }
 
-        protected function getIntFromEnv($envVarName)
-        {
-            return \filter_var(
-                \getenv($envVarName),
-                FILTER_VALIDATE_INT
-            );
-        }
 
         protected function verifyChecksum($installerPathName)
         {
@@ -205,11 +268,8 @@ if (!class_exists('ComposerWrapper')) {
 
         protected function isUpToDate($filename)
         {
-            $composerUpdateFrequency = '7 days';
-            $composerUpdateFrequencyEnv = \getenv(
-                'COMPOSER_UPDATE_FREQ'
-            );
-            if (\strlen($composerUpdateFrequencyEnv) > 1) {
+            $composerUpdateFrequencyEnv = $this->params->getUpdateFreq();
+            if (\strlen($composerUpdateFrequencyEnv) > 1) { // why?
                 $composerUpdateFrequency = $composerUpdateFrequencyEnv;
             }
 
@@ -253,7 +313,7 @@ if (!class_exists('ComposerWrapper')) {
 
         private function getSelfUpdateFlags($filename)
         {
-            $forceVersionRequested = $this->getIntFromEnv(self::ENV_FORCE_VERSION);
+            $forceVersionRequested = $this->params->getForceMajorVersion();
             $flags = '';
             if (false === $forceVersionRequested) {
                 return $flags;
@@ -263,7 +323,7 @@ if (!class_exists('ComposerWrapper')) {
                 throw new Exception(
                     sprintf(
                         'Wrong major version is requested: "%s"; only 1 and 2 are supported',
-                        \getenv(self::ENV_FORCE_VERSION)
+                        $forceVersionRequested
                     )
                 );
             }
@@ -354,6 +414,7 @@ if (!class_exists('ComposerWrapper')) {
          */
         public function run()
         {
+            $this->params->loadReal();
             $composerPathName = "{$this->getComposerDir()}/composer.phar";
 
             $this->ensureInstalled($composerPathName);
