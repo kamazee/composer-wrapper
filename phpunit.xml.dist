@@ -1,7 +1,6 @@
 <phpunit
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/7.5/phpunit.xsd"
-    processIsolation="false"
+    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/4.8/phpunit.xsd"
 >
 
     <testsuites>

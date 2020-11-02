@@ -13,9 +13,9 @@ class BaseTestCase extends TestCase
     }
 
 
-    private static function fullWrapperPath()
+    protected static function fullWrapperPath()
     {
-        return __DIR__ . '/' . self::WRAPPER;
+        return realpath(__DIR__ . '/' . self::WRAPPER);
     }
 
     protected function expectOutputWithShebang($output = null)

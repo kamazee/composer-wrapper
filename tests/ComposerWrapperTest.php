@@ -42,33 +42,7 @@ class ComposerWrapperTest extends TestCase
         $this->runCallsAllRequiredMethods(__DIR__);
     }
 
-    /**
-     * @test
-     * @expectedException Exception
-     * @expectedExceptionMessage is not a dir
-     */
-    public function runThrowsOnMissingDirFromEnv()
-    {
-        $nonExistingDir = __DIR__ . '/i_dont_exist';
-        $expectedError = "$nonExistingDir is not a dir";
-        $this->expectExceptionCompat('Exception', $expectedError);
 
-        putenv("COMPOSER_DIR=$nonExistingDir");
-        self::getInstance()->run();
-    }
-
-    /**
-     * @test
-     */
-    public function runThrowsOnNonDirFromEnv()
-    {
-        $nonDir = __FILE__;
-        $expectedExceptionMessage = "$nonDir is not a dir";
-        $this->expectExceptionCompat('Exception', $expectedExceptionMessage);
-
-        putenv("COMPOSER_DIR=$nonDir");
-        self::getInstance()->run();
-    }
 
     /**
      * @test
