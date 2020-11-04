@@ -21,194 +21,119 @@ class ComposerWrapperParamsTest extends TestCase
     /**
      * @test
      */
-    public function loadUpdateFreqFromEnv()
+    public function updateFreqLoadDefault()
     {
-        $nonDefaultValues = array(
-            'COMPOSER_UPDATE_FREQ' => -100,
-        );
-        $params = new ComposerWrapperParams();
-        self::isolatedEnv($nonDefaultValues, function () use ($params) {
-            $params->loadReal();
-        });
-
-        self::assertSame('-100', $params->getUpdateFreq());
-    }
-    /**
-     * @test
-     */
-    public function loadForceMajorVersionFromEnv()
-    {
-        $nonDefaultValues = array(
-            'COMPOSER_FORCE_MAJOR_VERSION' => "1",
-        );
-        $params = new ComposerWrapperParams();
-        self::isolatedEnv($nonDefaultValues, function () use ($params) {
-            $params->loadReal();
-        });
-
-        self::assertSame(1, $params->getForceMajorVersion());
-    }
-    /**
-     * @test
-     */
-    public function loadComposerDirFromEnv()
-    {
-        $tmpDir = vfsStream::url('root/UniqNameEnvDirectory');
-        mkdir($tmpDir);
-        $nonDefaultValues = array(
-            'COMPOSER_DIR' => $tmpDir
-        );
-        $params = new ComposerWrapperParams();
-        self::isolatedEnv($nonDefaultValues, function () use ($params) {
-            $params->loadReal();
-        });
-
-        self::assertSame("vfs://root/UniqNameEnvDirectory", $params->getComposerDir());
-    }
-    private function composerJsonFileWithWrapperConfig($wrapperConfig)
-    {
-        $json = vfsStream::url('root/composer.json');
-        $configWithNonDefaultValues = json_encode(array("config" => array("wrapper" => $wrapperConfig)));
-        file_put_contents($json, $configWithNonDefaultValues);
-
-        return vfsStream::url('root');
+        $params = $this->loadParamsDefault();
+        self::assertSame('7 days', $params->getUpdateFreq());
     }
 
-    /**
-     * @test
-     */
-    public function loadUpdateFreqFromComposerJson()
-    {
-        $path = $this->composerJsonFileWithWrapperConfig(array(
-            "update-freq" => -101,
-        ));
-
-        $params = new ComposerWrapperParams($path);
-        $params->loadReal();
-
-        self::assertSame('-101', $params->getUpdateFreq());
-    }
-    /**
-     * @test
-     */
-    public function loadMajorVersionFromComposerJson()
-    {
-        $path = $this->composerJsonFileWithWrapperConfig(
-            array("major-version" => "2")
-        );
-        $params = new ComposerWrapperParams($path);
-        $params->loadReal();
-
-        self::assertSame(2, $params->getForceMajorVersion());
-    }
-
-    /**
-     * @test
-     */
-    public function loadComposerDirFromComposerJson()
-    {
-        $tmpDir = vfsStream::url('root/UniqNameJsonDir');
-        mkdir($tmpDir);
-
-        $path = $this->composerJsonFileWithWrapperConfig(
-            array("composer-dir" => $tmpDir)
-        );
-
-        $params = new ComposerWrapperParams($path);
-        $params->loadReal();
-
-        self::assertSame('vfs://root/UniqNameJsonDir', $params->getComposerDir());
-    }
-
-    protected static function isolatedEnv($env, callable $callback)
-    {
-        foreach ($env as $name => $value) {
-            putenv($name . '=' . $value);
-        }
-        try {
-            $callback();
-        } catch (Exception $e) {
-
-        }
-        foreach ($env as $name => $value) {
-            putenv($name);
-        }
-
-        if (isset($e)) {
-            throw $e;
-        }
-    }
-
-    public function updateFreqValues()
+    public function updateFreqGoodDataProvider()
     {
         return array(
-            "default" => array(null, '7 days'),
             "some value" => array("40 days", "40 days"),
-            "some strange value, but supported with php engine" => array(-100, "-100"),
-
+            "float number, strange but supported by php engine" => array(1.5, "1.5"),
+            "negative integer, strange but supported by php engine" => array(-100, "-100"),
         );
     }
 
     /**
      * @test
-     * @dataProvider updateFreqValues
+     * @dataProvider updateFreqGoodDataProvider
      */
-    public function updateFreqParamCorrectValue($input, $expected)
+    public function updateFreqLoadWellFromEnv($input, $expected)
     {
-        $params = new ComposerWrapperParams();
-        if (null !== $input) {
-            $params->setUpdateFreq($input);
-        }
+        $params = $this->loadParamsFromEnv(array('COMPOSER_UPDATE_FREQ' => $input));
+
         self::assertSame($expected, $params->getUpdateFreq());
     }
 
-    public function wrongUpdateFreqValues()
+    /**
+     * @test
+     * @dataProvider updateFreqGoodDataProvider
+     */
+    public function updateFreqLoadWellFromJson($input, $expected)
+    {
+        $params = $this->loadParamsFromJson(array("update-freq" => $input));
+
+        self::assertSame($expected, $params->getUpdateFreq());
+    }
+
+    public function updateFreqBadDataProvider()
     {
         return array(
-            "integer is wrong value" => array(15),
+            "positive integer value" => array(100),
+            "zero" => array(0),
             "empty string" => array(''),
         );
     }
 
     /**
      * @test
-     * @dataProvider wrongUpdateFreqValues
+     * @dataProvider updateFreqBadDataProvider
      */
-    public function negativeValidationUpdateFreqParam($input)
+    public function updateFreqLoadBadFromEnv($input)
     {
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong update frequency is requested: .*/');
-        $params = new ComposerWrapperParams();
-        $params->setUpdateFreq($input);
+        $this->loadParamsFromEnv(array('COMPOSER_UPDATE_FREQ' => $input));
     }
 
-    public function forceMajorVersionValues()
+    /**
+     * @test
+     * @dataProvider updateFreqBadDataProvider
+     */
+    public function updateFreqLoadBadFromJson($input)
+    {
+        $this->skipIfFloatInJsonUnsupported($input);
+        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong update frequency is requested: .*/');
+        $this->loadParamsFromJson(array("update-freq" => $input));
+    }
+
+    /**
+     * @test
+     */
+    public function forceMajorVersionLoadDefault()
+    {
+        $params = $this->loadParamsDefault();
+        self::assertSame(false, $params->getForceMajorVersion());
+    }
+
+    public function forceMajorVersionGoodDataProvider()
     {
         return array(
-            "false is default" => array(null, false),
             "1 as int" => array(1, 1),
             "1 as string" => array("1", 1),
             "2 as int" => array(2, 2),
             "2 as string" => array("2", 2),
         );
     }
+
     /**
      * @test
-     * @dataProvider forceMajorVersionValues
+     * @dataProvider forceMajorVersionGoodDataProvider
      */
-    public function forceMajorVersionParamCorrectValues($input, $output)
+    public function forceMajorVersionLoadWellFromEnv($input, $output)
     {
-        $params = new ComposerWrapperParams();
-        if (null !== $input) {
-            $params->setForceMajorVersion($input);
-        }
+        $params = $this->loadParamsFromEnv(array('COMPOSER_FORCE_MAJOR_VERSION' => $input));
+
         self::assertSame($output, $params->getForceMajorVersion());
     }
 
-    public function wrongForceMajorVersionValues()
+    /**
+     * @test
+     * @dataProvider forceMajorVersionGoodDataProvider
+     */
+    public function forceMajorVersionLoadWellFromJson($input, $output)
+    {
+        $params = $this->loadParamsFromJson(array("major-version" => $input));
+
+        self::assertSame($output, $params->getForceMajorVersion());
+    }
+
+    public function forceMajorVersionBadDataProvider()
     {
         return array(
             "negative" => array(-1),
-            "allowed versions but float" => array(1.0),
+            "allowed versions but not in float" => array(1.0),
             "positive more than 2 " => array(3),
             "zero " => array(0),
         );
@@ -216,37 +141,73 @@ class ComposerWrapperParamsTest extends TestCase
 
     /**
      * @test
-     * @dataProvider wrongForceMajorVersionValues
+     * @dataProvider forceMajorVersionBadDataProvider
      */
-    public function negativeValidationForceMajorVersionParam($input)
+    public function forceMajorVersionLoadBadFromEnv($input)
     {
-        $this->expectExceptionMessageRegExpCompat('\Exception','/Wrong major version is requested:.*/');
-        $params = new ComposerWrapperParams();
-        $params->setForceMajorVersion($input);
+        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong major version is requested:.*/');
+
+        $this->loadParamsFromEnv(array('COMPOSER_FORCE_MAJOR_VERSION' => $input));
     }
 
-    public function composerDirValues()
+    /**
+     * @test
+     * @dataProvider forceMajorVersionBadDataProvider
+     */
+    public function forceMajorVersionLoadBadFromJson($input)
+    {
+        $this->skipIfFloatInJsonUnsupported($input);
+        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong major version is requested:.*/');
+        $this->loadParamsFromJson(array("major-version" => $input));
+    }
+
+    /**
+     * @test
+     */
+    public function composerDirLoadDefault()
+    {
+        $params = $this->loadParamsDefault();
+        self::assertSame(dirname(self::fullWrapperPath()), $params->getComposerDir());
+    }
+
+    public function composerDirGoodDataProvider()
     {
         return array(
-            "default path" => array(null, dirname(self::fullWrapperPath())),
-            "current dir" => array(__DIR__, __DIR__),
+            "project dir" => array(__DIR__, __DIR__),
+            "dir in other place" => array(
+                vfsStream::url('root/UniqNameEnvDirectory'),
+                'vfs://root/UniqNameEnvDirectory',
+            ),
         );
     }
 
     /**
      * @test
-     * @dataProvider composerDirValues
+     * @dataProvider composerDirGoodDataProvider
      */
-    public function composerDirCorrectValues($input, $expected)
+    public function composerDirLoadWellFromEnv($input, $expected)
     {
-        $params = new ComposerWrapperParams();
-        if (null !== $input) {
-            $params->setComposerDir($input);
+        if (!file_exists($input)) {
+            mkdir($input);
         }
+        $params = $this->loadParamsFromEnv(array('COMPOSER_DIR' => $input));
         self::assertSame($expected, $params->getComposerDir());
     }
 
-    public function wrongComposerDirValues()
+    /**
+     * @test
+     * @dataProvider composerDirGoodDataProvider
+     */
+    public function composerDirLoadWellFromJson($input, $expected)
+    {
+        if (!file_exists($input)) {
+            mkdir($input);
+        }
+        $params = $this->loadParamsFromJson(array("composer-dir" => $input));
+        self::assertSame($expected, $params->getComposerDir());
+    }
+
+    public function composerDirBadDataProvider()
     {
         return array(
             "access denied" => array('/var'),
@@ -257,14 +218,100 @@ class ComposerWrapperParamsTest extends TestCase
 
     /**
      * @test
-     * @dataProvider wrongComposerDirValues
+     * @dataProvider composerDirBadDataProvider
      */
-    public function negativeValidationComposerDirParam($input)
+    public function composerDirLoadBadFromEnv($input)
     {
-        $this->expectExceptionMessageRegExpCompat('\Exception','/Wrong composer dir is requested:.*/');
-        $params = new ComposerWrapperParams();
-        $params->setComposerDir($input);
+        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong composer dir is requested:.*/');
+        $this->loadParamsFromEnv(array('COMPOSER_DIR' => $input));
     }
 
+    /**
+     * @test
+     * @dataProvider composerDirBadDataProvider
+     */
+    public function composerDirLoadBadFromJson($input)
+    {
+        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong composer dir is requested:.*/');
+        $this->loadParamsFromJson(array("composer-dir" => $input));
+    }
 
+    /**
+     * @return ComposerWrapperParams
+     */
+    private function loadParamsDefault()
+    {
+        $params = new ComposerWrapperParams($this->isolatedFolder());
+        $params->loadReal();
+
+        return $params;
+    }
+
+    /**
+     * @param array $env
+     * @return ComposerWrapperParams
+     * @throws Exception
+     */
+    private function loadParamsFromEnv(array $env)
+    {
+        $params = new ComposerWrapperParams($this->isolatedFolder());
+        self::isolatedEnv(
+            $env,
+            function () use ($params) {
+                $params->loadReal();
+            }
+        );
+
+        return $params;
+    }
+
+    /**
+     * @param array $config
+     * @return ComposerWrapperParams
+     */
+    private function loadParamsFromJson(array $config)
+    {
+        $path = $this->folderWithJsonWithWrapperConfig(
+            $config
+        );
+        $params = new ComposerWrapperParams($path);
+        $params->loadReal();
+
+        return $params;
+    }
+
+    /**
+     * @param array $wrapperConfig
+     * @return string
+     */
+    private function folderWithJsonWithWrapperConfig(array $wrapperConfig)
+    {
+        $json = vfsStream::url('root/composer.json');
+
+        $options = 0;
+        if (null !== constant('JSON_PRESERVE_ZERO_FRACTION')) {
+            $options = JSON_PRESERVE_ZERO_FRACTION;
+        }
+        $configWithNonDefaultValues = json_encode(array("config" => array("wrapper" => $wrapperConfig)), $options);
+        file_put_contents($json, $configWithNonDefaultValues);
+
+        return vfsStream::url('root');
+    }
+
+    /**
+     * @return string
+     */
+    private function isolatedFolder()
+    {
+        return vfsStream::url('root');
+    }
+
+    private function skipIfFloatInJsonUnsupported($input)
+    {
+        if (PHP_VERSION_ID < 50606 && is_float($input)) {
+            self::markTestSkipped(
+                "Test skipped, because JSON_PRESERVE_ZERO_FRACTION available only since PHP 5.6.6 See https://www.php.net/manual/en/json.constants"
+            );
+        }
+    }
 }

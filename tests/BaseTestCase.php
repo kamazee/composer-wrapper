@@ -46,6 +46,35 @@ class BaseTestCase extends TestCase
         $property->setValue($object, $arg);
     }
 
+    protected static function isolatedEnv(array $env, callable $callback)
+    {
+        foreach ($env as $name => $value) {
+            putenv($name . '=' . self::convertToStringIfFloat($value));
+        }
+        try {
+            $callback();
+        } catch (Exception $e) {
+
+        }
+        foreach ($env as $name => $value) {
+            putenv($name);
+        }
+
+        if (isset($e)) {
+            throw $e;
+        }
+    }
+
+    protected static function convertToStringIfFloat($value)
+    {
+        if (is_float($value)) {
+            //float value 1.0 should be passed as "1.0" string but not "1"
+            $value = number_format($value, 1, '.', '');
+        }
+
+        return $value;
+    }
+
     protected function expectExceptionMessageCompat($class, $message)
     {
         if (

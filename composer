@@ -8,7 +8,7 @@
  * If it breaks, check out newer version or report an issue at
  * https://github.com/kamazee/composer-wrapper
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 if (!class_exists('ComposerWrapper')) {
     class ComposerWrapperParams {
@@ -68,15 +68,15 @@ if (!class_exists('ComposerWrapper')) {
             if (empty($composer['config']['wrapper'])) {
                 return;
             }
-
             $wrapper = $composer['config']['wrapper'];
-            if (!empty($wrapper['update-freq'])) {
+
+            if (array_key_exists('update-freq', $wrapper)) {
                 $this->setUpdateFreq($wrapper['update-freq']);
             }
-            if (!empty($wrapper['major-version'])) {
+            if (array_key_exists('major-version', $wrapper)) {
                 $this->setForceMajorVersion($wrapper['major-version']);
             }
-            if (!empty($wrapper['composer-dir'])) {
+            if (array_key_exists('composer-dir', $wrapper)) {
                 $this->setComposerDir($wrapper['composer-dir']);
             }
         }
@@ -122,9 +122,9 @@ if (!class_exists('ComposerWrapper')) {
         {
             // DateTime $modifier validation. Taken from https://stackoverflow.com/a/34899724/2165434
             $d = new DateTime();
-            $isValid = @$d->modify($updateFreq);
+            $modified = @$d->modify($updateFreq);
 
-            if ($isValid === false) {
+            if ($modified === false) {
                 throw new \Exception(sprintf('Wrong update frequency is requested: %s; should be valid DateTime modifier (follow %s for the help)', $updateFreq,'https://www.php.net/manual/en/datetime.modify.php'));
             }
 
