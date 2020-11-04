@@ -122,12 +122,18 @@ if (!class_exists('ComposerWrapper')) {
          */
         public function setUpdateFreq($updateFreq)
         {
-            // DateTime $modifier validation. Taken from https://stackoverflow.com/a/34899724/2165434
-            $d = new DateTime();
-            $modified = @$d->modify($updateFreq);
+            $now = new DateTime('now', new DateTimeZone('UTC'));
+            $modified = clone $now;
 
-            if ($modified === false) {
+            //hack: DateTime $modifier argument validation. Taken from https://stackoverflow.com/a/34899724/2165434
+            $success = @$modified->modify($updateFreq);
+            if ($success === false) {
                 throw new \Exception(sprintf('Wrong update frequency is requested: %s; should be valid DateTime modifier (follow %s for the help)', $updateFreq,'https://www.php.net/manual/en/datetime.modify.php'));
+            }
+            //endhack
+
+            if ($modified < $now) {
+                throw new \Exception(sprintf('Wrong update frequency is requested: %s; composer update frequency must not be negative', $updateFreq));
             }
 
             $this->updateFreq = (string) $updateFreq;
@@ -354,12 +360,6 @@ if (!class_exists('ComposerWrapper')) {
             $composerUpdateFrequency = $this->params->getUpdateFreq();
 
             $now = new \DateTime('now', new DateTimeZone('UTC'));
-            $nowClone = clone $now;
-            $nowPlusFrequency = $nowClone->modify($composerUpdateFrequency);
-
-            if ($nowPlusFrequency < $now) {
-                $this->showError('Composer update frequency must not be negative');
-            }
 
             $mtimeTimestamp = \filemtime($filename);
             $mtimePlusFrequency = \DateTime::createFromFormat(

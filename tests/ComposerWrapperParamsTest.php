@@ -64,7 +64,6 @@ class ComposerWrapperParamsTest extends TestCase
     {
         return array(
             "some value" => array("40 days", "40 days"),
-            "float number, strange but supported by php engine" => array(1.5, "1.5"),
             "negative integer, strange but supported by php engine" => array(-100, "-100"),
         );
     }
@@ -95,6 +94,7 @@ class ComposerWrapperParamsTest extends TestCase
     {
         return array(
             "positive integer value" => array(100),
+            "negative DateTime modifier" => array("-1 day"),
             "zero" => array(0),
             "empty string" => array(''),
         );
