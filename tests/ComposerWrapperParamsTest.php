@@ -4,8 +4,6 @@ require_once __DIR__ . '/BaseTestCase.php';
 
 use BaseTestCase as TestCase;
 use org\bovigo\vfs\vfsStream;
-use org\bovigo\vfs\vfsStreamDirectory;
-use org\bovigo\vfs\vfsStreamWrapper;
 
 class ComposerWrapperParamsTest extends TestCase
 {

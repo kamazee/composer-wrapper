@@ -61,7 +61,9 @@ if (!class_exists('ComposerWrapper')) {
         {
             $file = $this->wrapperDir . '/composer.json';
             // It is the same logic of reading composer.json as is in the Composer
-            if (!is_file($file) || !is_readable($file) || !is_array($composer = json_decode(file_get_contents($file),                                                                                        true))) {
+            if (!is_file($file)
+                || !is_readable($file)
+                || !is_array($composer = json_decode(file_get_contents($file),true))) {
                 return;
             }
 
