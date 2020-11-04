@@ -130,7 +130,7 @@ class ComposerWrapperTest extends TestCase
             ->with(ComposerWrapper::EXPECTED_INSTALLER_CHECKSUM_URL)
             ->willReturn($downloadResult);
 
-        $this->expectExceptionCompat('Exception', ComposerWrapper::MSG_ERROR_DOWNLOADING_CHECKSUM);
+        $this->expectExceptionMessageCompat('Exception', ComposerWrapper::MSG_ERROR_DOWNLOADING_CHECKSUM);
 
         $mock->installComposer(__DIR__);
     }
@@ -148,7 +148,7 @@ class ComposerWrapperTest extends TestCase
      */
     public function throwsOnFailureToDownloadInstaller()
     {
-        $this->expectExceptionCompat(
+        $this->expectExceptionMessageCompat(
             'Exception',
             ComposerWrapper::MSG_ERROR_DOWNLOADING_INSTALLER
         );
@@ -175,7 +175,7 @@ class ComposerWrapperTest extends TestCase
      */
     public function throwsOnInstallerChecksumMismatch()
     {
-        $this->expectExceptionCompat(
+        $this->expectExceptionMessageCompat(
             'Exception',
             ComposerWrapper::MSG_ERROR_INSTALLER_CHECKSUM_MISMATCH
         );
@@ -251,7 +251,7 @@ class ComposerWrapperTest extends TestCase
     public function throwsOnInstallerFailure()
     {
         $this->expectOutputWithShebang('Installer was called and will return an error');
-        $this->expectExceptionCompat('Exception', ComposerWrapper::MSG_ERROR_WHEN_INSTALLING);
+        $this->expectExceptionMessageCompat('Exception', ComposerWrapper::MSG_ERROR_WHEN_INSTALLING);
 
         $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
             ->setMethods(array('file_get_contents', 'copy', 'unlink'))
@@ -474,7 +474,7 @@ class ComposerWrapperTest extends TestCase
         $content = sprintf('<?php throw new Exception("%s");', $expectedExceptionText);
         $composer->setContent($content);
 
-        $this->expectExceptionCompat('Exception', $expectedExceptionText);
+        $this->expectExceptionMessageCompat('Exception', $expectedExceptionText);
         putenv("COMPOSER_DIR=$composerDir");
         $this->runCallsAllRequiredMethods($composerDir, false);
     }
@@ -569,18 +569,7 @@ class ComposerWrapperTest extends TestCase
         );
     }
 
-    private function expectExceptionCompat($class, $message)
-    {
-        if (
-            method_exists($this, 'expectExceptionMessage') &&
-            method_exists($this, 'expectException')
-        ) {
-            $this->expectException($class);
-            $this->expectExceptionMessage($message);
-        } elseif (method_exists($this, 'setExpectedException')) {
-            $this->setExpectedException($class, $message);
-        }
-    }
+
 
 
 }

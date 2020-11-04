@@ -3,6 +3,9 @@
 require_once __DIR__ . '/BaseTestCase.php';
 
 use BaseTestCase as TestCase;
+use org\bovigo\vfs\vfsStream;
+use org\bovigo\vfs\vfsStreamDirectory;
+use org\bovigo\vfs\vfsStreamWrapper;
 
 class ComposerWrapperParamsTest extends TestCase
 {
@@ -12,26 +15,109 @@ class ComposerWrapperParamsTest extends TestCase
     {
         parent::setUp();
         self::assertTrue(class_exists(self::COMPOSER_WRAPPER_PARAMS));
+        vfsStream::setup('/root');
     }
 
     /**
      * @test
      */
-    public function loadFromEnv()
+    public function loadUpdateFreqFromEnv()
     {
-        $envValues = array(
+        $nonDefaultValues = array(
             'COMPOSER_UPDATE_FREQ' => -100,
-            'COMPOSER_FORCE_MAJOR_VERSION' => "1",
-            'COMPOSER_DIR' => __DIR__
         );
         $params = new ComposerWrapperParams();
-        self::isolatedEnv($envValues, function () use ($params) {
+        self::isolatedEnv($nonDefaultValues, function () use ($params) {
             $params->loadReal();
         });
 
         self::assertSame('-100', $params->getUpdateFreq());
+    }
+    /**
+     * @test
+     */
+    public function loadForceMajorVersionFromEnv()
+    {
+        $nonDefaultValues = array(
+            'COMPOSER_FORCE_MAJOR_VERSION' => "1",
+        );
+        $params = new ComposerWrapperParams();
+        self::isolatedEnv($nonDefaultValues, function () use ($params) {
+            $params->loadReal();
+        });
+
         self::assertSame(1, $params->getForceMajorVersion());
-        self::assertSame(__DIR__, $params->getComposerDir());
+    }
+    /**
+     * @test
+     */
+    public function loadComposerDirFromEnv()
+    {
+        $tmpDir = vfsStream::url('root/UniqNameEnvDirectory');
+        mkdir($tmpDir);
+        $nonDefaultValues = array(
+            'COMPOSER_DIR' => $tmpDir
+        );
+        $params = new ComposerWrapperParams();
+        self::isolatedEnv($nonDefaultValues, function () use ($params) {
+            $params->loadReal();
+        });
+
+        self::assertSame("vfs://root/UniqNameEnvDirectory", $params->getComposerDir());
+    }
+    private function composerJsonFileWithWrapperConfig($wrapperConfig)
+    {
+        $json = vfsStream::url('root/composer.json');
+        $configWithNonDefaultValues = json_encode(array("config" => array("wrapper" => $wrapperConfig)));
+        file_put_contents($json, $configWithNonDefaultValues);
+
+        return vfsStream::url('root');
+    }
+
+    /**
+     * @test
+     */
+    public function loadUpdateFreqFromComposerJson()
+    {
+        $path = $this->composerJsonFileWithWrapperConfig(array(
+            "update-freq" => -101,
+        ));
+
+        $params = new ComposerWrapperParams($path);
+        $params->loadReal();
+
+        self::assertSame('-101', $params->getUpdateFreq());
+    }
+    /**
+     * @test
+     */
+    public function loadMajorVersionFromComposerJson()
+    {
+        $path = $this->composerJsonFileWithWrapperConfig(
+            array("major-version" => "2")
+        );
+        $params = new ComposerWrapperParams($path);
+        $params->loadReal();
+
+        self::assertSame(2, $params->getForceMajorVersion());
+    }
+
+    /**
+     * @test
+     */
+    public function loadComposerDirFromComposerJson()
+    {
+        $tmpDir = vfsStream::url('root/UniqNameJsonDir');
+        mkdir($tmpDir);
+
+        $path = $this->composerJsonFileWithWrapperConfig(
+            array("composer-dir" => $tmpDir)
+        );
+
+        $params = new ComposerWrapperParams($path);
+        $params->loadReal();
+
+        self::assertSame('vfs://root/UniqNameJsonDir', $params->getComposerDir());
     }
 
     protected static function isolatedEnv($env, callable $callback)
@@ -90,8 +176,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function negativeValidationUpdateFreqParam($input)
     {
-        $this->expectException('\Exception');
-        $this->expectExceptionMessageRegExp('/Wrong update frequency is requested: .*/');
+        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong update frequency is requested: .*/');
         $params = new ComposerWrapperParams();
         $params->setUpdateFreq($input);
     }
@@ -135,8 +220,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function negativeValidationForceMajorVersionParam($input)
     {
-        $this->expectException('\Exception');
-        $this->expectExceptionMessageRegExp('/Wrong major version is requested:.*/');
+        $this->expectExceptionMessageRegExpCompat('\Exception','/Wrong major version is requested:.*/');
         $params = new ComposerWrapperParams();
         $params->setForceMajorVersion($input);
     }
@@ -177,8 +261,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function negativeValidationComposerDirParam($input)
     {
-        $this->expectException('\Exception');
-        $this->expectExceptionMessageRegExp('/Wrong composer dir is requested:.*/');
+        $this->expectExceptionMessageRegExpCompat('\Exception','/Wrong composer dir is requested:.*/');
         $params = new ComposerWrapperParams();
         $params->setComposerDir($input);
     }

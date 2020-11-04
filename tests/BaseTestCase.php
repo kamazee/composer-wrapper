@@ -45,4 +45,30 @@ class BaseTestCase extends TestCase
 
         $property->setValue($object, $arg);
     }
+
+    protected function expectExceptionMessageCompat($class, $message)
+    {
+        if (
+            method_exists($this, 'expectExceptionMessage') &&
+            method_exists($this, 'expectException')
+        ) {
+            $this->expectException($class);
+            $this->expectExceptionMessage($message);
+        } elseif (method_exists($this, 'setExpectedException')) {
+            $this->setExpectedException($class, $message);
+        }
+    }
+
+    protected function expectExceptionMessageRegExpCompat($class, $regExp)
+    {
+        if (
+            method_exists($this, 'expectExceptionMessage') &&
+            method_exists($this, 'expectException')
+        ) {
+            $this->expectException($class);
+            $this->expectExceptionMessageRegExp($regExp);
+        } elseif (method_exists($this, 'setExpectedException')) {
+            $this->setExpectedExceptionRegExp($class, $regExp);
+        }
+    }
 }

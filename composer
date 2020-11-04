@@ -24,6 +24,17 @@ if (!class_exists('ComposerWrapper')) {
          * @var string
          */
         private $composerDir = __DIR__;
+        /**
+         * @var string
+         */
+        private $wrapperDir = __DIR__;
+
+        public function __construct($wrapperDir = null)
+        {
+            if (null !== $wrapperDir) {
+                $this->wrapperDir = $wrapperDir;
+            }
+        }
 
         public function loadReal()
         {
@@ -48,7 +59,7 @@ if (!class_exists('ComposerWrapper')) {
 
         private function loadComposerJson()
         {
-            $file = __DIR__ . '/composer.json';
+            $file = $this->wrapperDir . '/composer.json';
             // It is the same logic of reading composer.json as is in the Composer
             if (!is_file($file) || !is_readable($file) || !is_array($composer = json_decode(file_get_contents($file),                                                                                        true))) {
                 return;
@@ -60,10 +71,13 @@ if (!class_exists('ComposerWrapper')) {
 
             $wrapper = $composer['config']['wrapper'];
             if (!empty($wrapper['update-freq'])) {
-                $this->updateFreq = $wrapper['update-freq'];
+                $this->setUpdateFreq($wrapper['update-freq']);
             }
             if (!empty($wrapper['major-version'])) {
-                $this->updateFreq = $wrapper['major-version'];
+                $this->setForceMajorVersion($wrapper['major-version']);
+            }
+            if (!empty($wrapper['composer-dir'])) {
+                $this->setComposerDir($wrapper['composer-dir']);
             }
         }
 
