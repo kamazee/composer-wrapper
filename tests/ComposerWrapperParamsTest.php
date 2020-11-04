@@ -19,6 +19,41 @@ class ComposerWrapperParamsTest extends TestCase
     /**
      * @test
      */
+    public function envVariablesHasBiggerPriority()
+    {
+        $dir1 = vfsStream::url('root/dir1');
+        $dir2 = vfsStream::url('root/dir2');
+        mkdir($dir1);
+        mkdir($dir2);
+
+        $path = $this->folderWithJsonWithWrapperConfig(
+            array(
+                "update-freq" => "100 days",
+                "major-version" => 1,
+                "composer-dir" => $dir1
+            )
+        );
+        $params = new ComposerWrapperParams($path);
+        self::isolatedEnv(
+            array(
+                "COMPOSER_UPDATE_FREQ" => "101 days",
+                "COMPOSER_FORCE_MAJOR_VERSION" => 2,
+                "COMPOSER_DIR" => $dir2,
+            ),
+            function () use ($params) {
+                $params->loadReal();
+            }
+        );
+
+        self::assertSame("101 days", $params->getUpdateFreq());
+        self::assertSame(2, $params->getForceMajorVersion());
+        self::assertSame("vfs://root/dir2", $params->getComposerDir());
+
+    }
+
+    /**
+     * @test
+     */
     public function updateFreqLoadDefault()
     {
         $params = $this->loadParamsDefault();
