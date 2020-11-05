@@ -46,8 +46,14 @@ class BaseTestCase extends TestCase
         $property->setValue($object, $arg);
     }
 
-    protected static function isolatedEnv(array $env, callable $callback)
+    protected static function isolatedEnv(array $env, $callback)
     {
+        // php 5.3 doesn't support callable pseudo type hint :(
+        if (!is_callable($callback)) {
+            throw new \Exception(
+                sprintf("%s should be callable; got %s", '$callback', gettype($callback))
+            );
+        }
         foreach ($env as $name => $value) {
             putenv($name . '=' . self::convertToStringIfFloat($value));
         }
