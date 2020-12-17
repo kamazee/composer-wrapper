@@ -8,9 +8,160 @@
  * If it breaks, check out newer version or report an issue at
  * https://github.com/kamazee/composer-wrapper
  *
- * @version 1.1.0
+ * @version 1.2.0
  */
 if (!class_exists('ComposerWrapper')) {
+    class ComposerWrapperParams {
+        /**
+         * @var int|false
+         */
+        private $forceMajorVersion = false;
+        /**
+         * @var string
+         */
+        private $updateFreq = '7 days';
+        /**
+         * @var string
+         */
+        private $composerDir = __DIR__;
+        /**
+         * @var string
+         */
+        private $wrapperDir = __DIR__;
+
+        public function __construct($wrapperDir = null)
+        {
+            if (null !== $wrapperDir) {
+                $this->wrapperDir = $wrapperDir;
+            }
+        }
+
+        public function loadReal()
+        {
+            $this->loadComposerJson();
+            // env variables have the highest priority
+            $this->loadEnv();
+        }
+
+
+        private function loadEnv()
+        {
+            if ( false !== $value = \getenv('COMPOSER_UPDATE_FREQ')) {
+                $this->setUpdateFreq($value);
+            }
+            if ( false !== $value = \getenv('COMPOSER_FORCE_MAJOR_VERSION')) {
+                $this->setForceMajorVersion($value);
+            }
+            if ( false !== $value = \getenv('COMPOSER_DIR')) {
+                $this->setComposerDir($value);
+            }
+        }
+
+        private function loadComposerJson()
+        {
+            $file = $this->wrapperDir . '/composer.json';
+            // It is the same logic of reading composer.json as is in the Composer
+            if (!is_file($file)
+                || !is_readable($file)
+                || !is_array($composer = json_decode(file_get_contents($file),true))) {
+                return;
+            }
+
+            if (empty($composer['config']['wrapper'])) {
+                return;
+            }
+            $wrapper = $composer['config']['wrapper'];
+
+            if (array_key_exists('update-freq', $wrapper)) {
+                $this->setUpdateFreq($wrapper['update-freq']);
+            }
+            if (array_key_exists('major-version', $wrapper)) {
+                $this->setForceMajorVersion($wrapper['major-version']);
+            }
+            if (array_key_exists('composer-dir', $wrapper)) {
+                $this->setComposerDir($wrapper['composer-dir']);
+            }
+        }
+
+        /**
+         * @return bool
+         */
+        public function getForceMajorVersion()
+        {
+            return $this->forceMajorVersion;
+        }
+
+        /**
+         * @param false|int $version
+         */
+        public function setForceMajorVersion($version)
+        {
+            $allowed = array("1", 1, "2", 2);
+            if (false === in_array($version, $allowed, true)) {
+                throw new Exception(
+                    sprintf(
+                        'Wrong major version is requested: "%s"; only 1 and 2 are supported in string or integer format',
+                        $version
+                    )
+                );
+            }
+            $this->forceMajorVersion = (int) $version;
+        }
+
+        /**
+         * @return string
+         */
+        public function getUpdateFreq()
+        {
+
+            return $this->updateFreq;
+        }
+
+        /**
+         * @param string $updateFreq
+         */
+        public function setUpdateFreq($updateFreq)
+        {
+            $now = new DateTime('now', new DateTimeZone('UTC'));
+            $modified = clone $now;
+
+            //hack: DateTime $modifier argument validation. Taken from https://stackoverflow.com/a/34899724/2165434
+            $success = @$modified->modify($updateFreq);
+            if ($success === false) {
+                throw new \Exception(sprintf('Wrong update frequency is requested: %s; should be valid DateTime modifier (follow %s for the help)', $updateFreq,'https://www.php.net/manual/en/datetime.modify.php'));
+            }
+            //endhack
+
+            if ($modified < $now) {
+                throw new \Exception(sprintf('Wrong update frequency is requested: %s; composer update frequency must not be negative', $updateFreq));
+            }
+
+            $this->updateFreq = (string) $updateFreq;
+        }
+
+        /**
+         * @return string
+         */
+        public function getComposerDir()
+        {
+            return $this->composerDir;
+        }
+
+        /**
+         * @param string $composerDir
+         */
+        public function setComposerDir($composerDir)
+        {
+            if (!is_dir($composerDir) || !is_writable($composerDir)) {
+                throw new \Exception(sprintf(
+                        "Wrong composer dir is requested: %s; argument is not a dir or is not writable dir",
+                        $composerDir));
+            }
+
+            $this->composerDir = (string) $composerDir;
+        }
+
+    }
     class ComposerWrapper
     {
         const COMPOSER_HASHBANG = "#!/usr/bin/env php\n";
@@ -30,7 +181,15 @@ if (!class_exists('ComposerWrapper')) {
         const MSG_SELF_UPDATE_FAILED = 'composer self-update failed; proceeding with existing';
         const EXIT_CODE_COMPOSER_EXCEPTION = 6;
 
-        const ENV_FORCE_VERSION = 'COMPOSER_FORCE_MAJOR_VERSION';
+        /**
+         * @var ComposerWrapperParams
+         */
+        protected $params;
+
+        public function __construct()
+        {
+            $this->params = new ComposerWrapperParams();
+        }
 
         protected function file_get_contents()
         {
@@ -143,13 +302,6 @@ if (!class_exists('ComposerWrapper')) {
             unset($exitCode);
         }
 
-        protected function getIntFromEnv($envVarName)
-        {
-            return \filter_var(
-                \getenv($envVarName),
-                FILTER_VALIDATE_INT
-            );
-        }
 
         protected function verifyChecksum($installerPathName)
         {
@@ -205,21 +357,9 @@ if (!class_exists('ComposerWrapper')) {
 
         protected function isUpToDate($filename)
         {
-            $composerUpdateFrequency = '7 days';
-            $composerUpdateFrequencyEnv = \getenv(
-                'COMPOSER_UPDATE_FREQ'
-            );
-            if (\strlen($composerUpdateFrequencyEnv) > 1) {
-                $composerUpdateFrequency = $composerUpdateFrequencyEnv;
-            }
+            $composerUpdateFrequency = $this->params->getUpdateFreq();
 
             $now = new \DateTime('now', new DateTimeZone('UTC'));
-            $nowClone = clone $now;
-            $nowPlusFrequency = $nowClone->modify($composerUpdateFrequency);
-
-            if ($nowPlusFrequency < $now) {
-                $this->showError('Composer update frequency must not be negative');
-            }
 
             $mtimeTimestamp = \filemtime($filename);
             $mtimePlusFrequency = \DateTime::createFromFormat(
@@ -253,19 +393,10 @@ if (!class_exists('ComposerWrapper')) {
 
         private function getSelfUpdateFlags($filename)
         {
-            $forceVersionRequested = $this->getIntFromEnv(self::ENV_FORCE_VERSION);
+            $forceVersionRequested = $this->params->getForceMajorVersion();
             $flags = '';
             if (false === $forceVersionRequested) {
                 return $flags;
-            }
-
-            if ($forceVersionRequested && 1 !== $forceVersionRequested && 2 !== $forceVersionRequested) {
-                throw new Exception(
-                    sprintf(
-                        'Wrong major version is requested: "%s"; only 1 and 2 are supported',
-                        \getenv(self::ENV_FORCE_VERSION)
-                    )
-                );
             }
 
             if ($this->supportsForceVersionFlag(
@@ -330,31 +461,12 @@ if (!class_exists('ComposerWrapper')) {
         }
 
         /**
-         * @return string
-         * @throws Exception
-         */
-        private function getComposerDir()
-        {
-            $defaultComposerDir = __DIR__;
-            $composerDirEnv = \getenv('COMPOSER_DIR');
-
-            if (\strlen($composerDirEnv) > 0) {
-                if (!is_dir($composerDirEnv)) {
-                    throw new \Exception("$composerDirEnv is not a dir");
-                }
-
-                return $composerDirEnv;
-            }
-
-            return $defaultComposerDir;
-        }
-
-        /**
          * @throws Exception
          */
         public function run()
         {
-            $composerPathName = "{$this->getComposerDir()}/composer.phar";
+            $this->params->loadReal();
+            $composerPathName = "{$this->params->getComposerDir()}/composer.phar";
 
             $this->ensureInstalled($composerPathName);
             $this->ensureExecutable($composerPathName);
