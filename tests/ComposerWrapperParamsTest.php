@@ -1,7 +1,5 @@
 <?php
 
-require_once __DIR__ . '/BaseTestCase.php';
-
 use BaseTestCase as TestCase;
 use org\bovigo\vfs\vfsStream;
 
@@ -9,18 +7,12 @@ class ComposerWrapperParamsTest extends TestCase
 {
     const COMPOSER_WRAPPER_PARAMS = 'ComposerWrapperParams';
 
-    public function setUp()
-    {
-        parent::setUp();
-        self::assertTrue(class_exists(self::COMPOSER_WRAPPER_PARAMS));
-        vfsStream::setup('/root');
-    }
-
     /**
      * @test
      */
     public function envVariablesHasBiggerPriority()
     {
+        vfsStream::setup('/root');
         $dir1 = vfsStream::url('root/dir1');
         $dir2 = vfsStream::url('root/dir2');
         mkdir($dir1);
@@ -56,6 +48,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function updateFreqLoadDefault()
     {
+        vfsStream::setup('/root');
         $params = $this->loadParamsDefault();
         self::assertSame('7 days', $params->getUpdateFreq());
     }
@@ -74,6 +67,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function updateFreqLoadWellFromEnv($input, $expected)
     {
+        vfsStream::setup('/root');
         $params = $this->loadParamsFromEnv(array('COMPOSER_UPDATE_FREQ' => $input));
 
         self::assertSame($expected, $params->getUpdateFreq());
@@ -85,6 +79,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function updateFreqLoadWellFromJson($input, $expected)
     {
+        vfsStream::setup('/root');
         $params = $this->loadParamsFromJson(array("update-freq" => $input));
 
         self::assertSame($expected, $params->getUpdateFreq());
@@ -106,6 +101,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function updateFreqLoadBadFromEnv($input)
     {
+        vfsStream::setup('/root');
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong update frequency is requested: .*/');
         $this->loadParamsFromEnv(array('COMPOSER_UPDATE_FREQ' => $input));
     }
@@ -116,6 +112,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function updateFreqLoadBadFromJson($input)
     {
+        vfsStream::setup('/root');
         $this->skipIfFloatInJsonUnsupported($input);
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong update frequency is requested: .*/');
         $this->loadParamsFromJson(array("update-freq" => $input));
@@ -126,6 +123,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function forceMajorVersionLoadDefault()
     {
+        vfsStream::setup('/root');
         $params = $this->loadParamsDefault();
         self::assertSame(false, $params->getForceMajorVersion());
     }
@@ -146,6 +144,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function forceMajorVersionLoadWellFromEnv($input, $output)
     {
+        vfsStream::setup('/root');
         $params = $this->loadParamsFromEnv(array('COMPOSER_FORCE_MAJOR_VERSION' => $input));
 
         self::assertSame($output, $params->getForceMajorVersion());
@@ -157,6 +156,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function forceMajorVersionLoadWellFromJson($input, $output)
     {
+        vfsStream::setup('/root');
         $params = $this->loadParamsFromJson(array("major-version" => $input));
 
         self::assertSame($output, $params->getForceMajorVersion());
@@ -178,6 +178,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function forceMajorVersionLoadBadFromEnv($input)
     {
+        vfsStream::setup('/root');
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong major version is requested:.*/');
 
         $this->loadParamsFromEnv(array('COMPOSER_FORCE_MAJOR_VERSION' => $input));
@@ -189,6 +190,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function forceMajorVersionLoadBadFromJson($input)
     {
+        vfsStream::setup('/root');
         $this->skipIfFloatInJsonUnsupported($input);
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong major version is requested:.*/');
         $this->loadParamsFromJson(array("major-version" => $input));
@@ -199,6 +201,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function composerDirLoadDefault()
     {
+        vfsStream::setup('/root');
         $params = $this->loadParamsDefault();
         self::assertSame(dirname(self::fullWrapperPath()), $params->getComposerDir());
     }
@@ -220,6 +223,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function composerDirLoadWellFromEnv($input, $expected)
     {
+        vfsStream::setup('/root');
         if (!file_exists($input)) {
             mkdir($input);
         }
@@ -233,6 +237,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function composerDirLoadWellFromJson($input, $expected)
     {
+        vfsStream::setup('/root');
         if (!file_exists($input)) {
             mkdir($input);
         }
@@ -255,6 +260,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function composerDirLoadBadFromEnv($input)
     {
+        vfsStream::setup('/root');
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong composer dir is requested:.*/');
         $this->loadParamsFromEnv(array('COMPOSER_DIR' => $input));
     }
@@ -265,6 +271,7 @@ class ComposerWrapperParamsTest extends TestCase
      */
     public function composerDirLoadBadFromJson($input)
     {
+        vfsStream::setup('/root');
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong composer dir is requested:.*/');
         $this->loadParamsFromJson(array("composer-dir" => $input));
     }

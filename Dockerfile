@@ -20,7 +20,7 @@ WORKDIR /root/openssl-1.0.2o
 RUN ./config --prefix=/opt/openssl-1.0.2o && make -j$(nproc) && make install_sw
 
 WORKDIR /root
-RUN curl --output php-5.3.3.tar.bz2 http://museum.php.net/php5/php-5.3.3.tar.bz2
+RUN curl --output php-5.3.3.tar.bz2 https://museum.php.net/php5/php-5.3.3.tar.bz2
 RUN echo "f2876750f3c54854a20e26a03ca229f2fbf89b8ee6176b9c0586cb9b2f0b3f9a  php-5.3.3.tar.bz2" | sha256sum --check -
 RUN tar --use-compress-program=pbzip2 --extract --file php-5.3.3.tar.bz2
 RUN curl --output php53-libxml.patch https://mail.gnome.org/archives/xml/2012-August/txtbgxGXAvz4N.txt
@@ -40,7 +40,7 @@ RUN /opt/php-5.3.3/bin/pecl install xdebug-2.2.7
 RUN ln --symbolic /opt/php-5.3.3/bin/php /usr/local/bin/php533
 
 WORKDIR /root
-RUN curl --location --output php-7.2.7.tar.bz2 http://php.net/distributions/php-7.2.7.tar.bz2
+RUN curl --location --output php-7.2.7.tar.bz2 https://php.net/distributions/php-7.2.7.tar.bz2
 RUN echo "cc81675a96af4dd18d8ffc02f26a36c622abadf86af7ecfea7bcde8d3c96d5a3  php-7.2.7.tar.bz2" | sha256sum --check -
 RUN tar --use-compress-program=pbzip2 --extract --file=php-7.2.7.tar.bz2
 WORKDIR /root/php-7.2.7
@@ -56,6 +56,26 @@ RUN ./configure --prefix=/opt/php-7.2.7 \
 RUN /opt/php-7.2.7/bin/pecl install xdebug
 
 RUN ln --symbolic /opt/php-7.2.7/bin/php /usr/local/bin/php727
+
+WORKDIR /root
+RUN DEBIAN_FRONTEND=noninteractive apt-get --quiet --assume-yes install libonig-dev
+RUN curl --location --output php-8.0.0.tar.bz2 https://php.net/distributions/php-8.0.0.tar.bz2 && \
+    echo "5e832dc37eabf444410b4ea6fb3d66b72e44e7407a3b49caa5746edcf71b9d09  php-8.0.0.tar.bz2" | sha256sum --check -
+RUN tar --use-compress-program=pbzip2 --extract --file=php-8.0.0.tar.bz2
+WORKDIR /root/php-8.0.0
+RUN ./configure --prefix=/opt/php-8.0.0 \
+    --disable-cgi \
+    --without-sqlite3 \
+    --without-pdo_sqlite \
+    --with-openssl \
+    --with-pear \
+    --enable-mbstring \
+    && make -j$(nproc) \
+    && make install
+
+RUN /opt/php-8.0.0/bin/pecl install xdebug
+
+RUN ln --symbolic /opt/php-8.0.0/bin/php /usr/local/bin/php800
 
 # To make composer work with --prefer-dist work (requires unzip program or zip ext)
 RUN DEBIAN_FRONTEND=noninteractive apt-get install --quiet --assume-yes unzip
