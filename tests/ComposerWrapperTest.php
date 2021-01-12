@@ -8,6 +8,7 @@ class ComposerWrapperTest extends TestCase
 {
 
     const WRAPPER_CLASS = 'ComposerWrapper';
+    const WRAPPER_PARAMS_CLASS = 'ComposerWrapperParams';
     const INSTALLER = '<?php die("This is a stub and should never be executed");';
 
 
@@ -30,11 +31,11 @@ class ComposerWrapperTest extends TestCase
      */
     public function runUsesDirFromEnvIfCorrect()
     {
-        putenv(sprintf('COMPOSER_DIR=%s', __DIR__));
-        $this->runCallsAllRequiredMethods(__DIR__);
+        $self = $this;
+        self::isolatedEnv(array('COMPOSER_DIR' => __DIR__), function () use ($self) {
+            $self->runCallsAllRequiredMethods(__DIR__);
+        });
     }
-
-
 
     /**
      * @test
@@ -53,6 +54,53 @@ class ComposerWrapperTest extends TestCase
             ->willReturn(null);
 
         self::callNonPublic($mock, 'ensureInstalled', array($filename));
+    }
+
+    /**
+     * @test
+     * @dataProvider installsRequestedMajorVersionExamples
+     */
+    public function installsRequestedMajorVersion($dir, $supportsMajorVersionFlag, $requestedVersion)
+    {
+        $params = $this->getMockBuilder(self::WRAPPER_PARAMS_CLASS)
+            ->setMethods(array('getForceMajorVersion'))
+            ->getMock();
+        $params->expects(self::any())->method('getForceMajorVersion')->willReturn($requestedVersion);
+        $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
+            ->setMethods(array('showError', 'copy', 'verifyChecksum', 'unlink', 'supportsForceVersionFlag'))
+            ->setConstructorArgs(array($params))
+            ->getMock();
+        if ($supportsMajorVersionFlag) {
+            $showErrorExpectation = self::never();
+        } else {
+            $showErrorExpectation = self::once();
+        }
+        $wrapper->expects($showErrorExpectation)->method('showError');
+        $wrapper->expects(self::once())->method('copy')->willReturn(true);
+        $wrapper->expects(self::once())->method('verifyChecksum')->willReturn(null);
+        $wrapper->expects(self::once())->method('unlink')->willReturn(null);
+        $wrapper->expects(self::once())->method('supportsForceVersionFlag')->willReturn($supportsMajorVersionFlag);
+        self::callNonPublic(
+            $wrapper,
+            'installComposer',
+            array($dir)
+        );
+    }
+
+    public static function installsRequestedMajorVersionExamples()
+    {
+        return array(
+            'version 1 is requested; installed supports flag' => array(
+                'dir' => __DIR__ . '/installer_stub_with_major_version_flags',
+                'supportsMajorVersionFlags' => true,
+                'requestedVersion' => 1,
+            ),
+            'version 1 is requested; installed doesn\'t support flag' => array(
+                'dir' => __DIR__ . '/installer_stub_without_major_version_flags',
+                'supportsMajorVersionFlags' => false,
+                'requestedVersion' => 1,
+            ),
+        );
     }
 
     /**
@@ -411,10 +459,13 @@ class ComposerWrapperTest extends TestCase
         $wrapper->expects($this->once())->method('touch')->willReturn(null);
         $wrapper->expects($expectError ? $this->once() : $this->never())->method('showError');
         $self = $this;
-        $wrapper->expects($this->once())->method('passthru')->with()->willReturnCallback(function($command, &$exitCode) use ($self, $flag) {
-            $self->assertStringEndsWith(' self-update' . (null === $flag ? '' : " $flag"), $command);
-            $exitCode = 0;
-        });
+        $wrapper->expects($this->once())->method('passthru')->with()
+            ->willReturnCallback(
+                function($command, &$exitCode) use ($self, $flag) {
+                    $self->assertStringEndsWith(' self-update' . (null === $flag ? '' : " $flag"), $command);
+                    $exitCode = 0;
+                }
+            );
 
         $params = new ComposerWrapperParams();
         $params->setForceMajorVersion($version);
@@ -467,11 +518,13 @@ class ComposerWrapperTest extends TestCase
         $composer->setContent($content);
 
         $this->expectExceptionMessageCompat('Exception', $expectedExceptionText);
-        putenv("COMPOSER_DIR=$composerDir");
-        $this->runCallsAllRequiredMethods($composerDir, false);
+        $self = $this;
+        self::isolatedEnv(array('COMPOSER_DIR' => $composerDir), function () use ($composerDir, $self) {
+            $self->runCallsAllRequiredMethods($composerDir, false);
+        });
     }
 
-    private function runCallsAllRequiredMethods($expectedComposerDir, $mockDelegate = true)
+    public function runCallsAllRequiredMethods($expectedComposerDir, $mockDelegate = true)
     {
         $methods = array('ensureInstalled', 'ensureExecutable', 'ensureUpToDate');
         if ($mockDelegate) {
@@ -544,21 +597,36 @@ class ComposerWrapperTest extends TestCase
     public static function selfUpdateHelpProvider()
     {
         return array(
-            'without_version_flags' => array(
+            'self_update_without_version_flags' => array(
                 'helpOutput' => file(__DIR__ . '/self-update_help_examples/without_version_flags.txt'),
                 'versions' => array(1, 2),
                 'expectedResult' => false
             ),
-            'with_version_flags' => array(
+            'self_update_with_version_flags' => array(
                 'helpOutput' => file(__DIR__ . '/self-update_help_examples/with_version_flags.txt'),
                 'versions' => array(1, 2),
                 'expectedResult' => true,
             ),
-            'with_version_flags_without_3' => array(
+            'self_update_with_version_flags_without_3' => array(
                 'helpOutput' => file(__DIR__ . '/self-update_help_examples/with_version_flags.txt'),
                 'versions' => array(3),
                 'expectedResult' => false,
             ),
+            'installer_with_major_version_flag' => array(
+                'helpOutput' => file(__DIR__ . '/installer_stub_with_major_version_flags/help_output.txt'),
+                'versions' => array(1, 2),
+                'expectedResult' => true,
+            ),
+            'installer_with_major_version_flag_wrong_version' => array(
+                'helpOutput' => file(__DIR__ . '/installer_stub_with_major_version_flags/help_output.txt'),
+                'versions' => array(3),
+                'expectedResult' => false,
+            ),
+            'installer_without_major_version_flag' => array(
+                'helpOutput' => file(__DIR__ . '/installer_stub_without_major_version_flags/help_output.txt'),
+                'versions' => array(1, 2),
+                'expectedResult' => false,
+            )
         );
     }
 

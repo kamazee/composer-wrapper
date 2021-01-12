@@ -17,7 +17,7 @@ class BaseTestCase extends TestCase
         return $wrapperFileLines[0];
     }
 
-    protected static function callNonPublic($object, $method, $args)
+    public static function callNonPublic($object, $method, $args)
     {
         $method = new ReflectionMethod($object, $method);
         $method->setAccessible(true);
