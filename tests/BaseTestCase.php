@@ -6,22 +6,9 @@ class BaseTestCase extends TestCase
 {
     const WRAPPER = '../composer';
 
-    public function setUp()
-    {
-        $this->expectOutputWithShebang();
-        require self::fullWrapperPath();
-    }
-
-
     protected static function fullWrapperPath()
     {
         return realpath(__DIR__ . '/' . self::WRAPPER);
-    }
-
-    protected function expectOutputWithShebang($output = null)
-    {
-        $shebang = $this->getExpectedShebang();
-        $this->expectOutputString($shebang . $output);
     }
 
     private function getExpectedShebang()
@@ -83,11 +70,11 @@ class BaseTestCase extends TestCase
 
     protected function expectExceptionMessageCompat($class, $message)
     {
-        if (
-            method_exists($this, 'expectExceptionMessage') &&
-            method_exists($this, 'expectException')
-        ) {
+        if (method_exists($this, 'expectException')) {
             $this->expectException($class);
+        }
+
+        if (method_exists($this, 'expectExceptionMessage')) {
             $this->expectExceptionMessage($message);
         } elseif (method_exists($this, 'setExpectedException')) {
             $this->setExpectedException($class, $message);
@@ -96,11 +83,13 @@ class BaseTestCase extends TestCase
 
     protected function expectExceptionMessageRegExpCompat($class, $regExp)
     {
-        if (
-            method_exists($this, 'expectExceptionMessage') &&
-            method_exists($this, 'expectException')
-        ) {
+        if (method_exists($this, 'expectException')) {
             $this->expectException($class);
+        }
+
+        if (method_exists($this, 'expectExceptionMessageMatches')) {
+            $this->expectExceptionMessageMatches($regExp);
+        } elseif (method_exists($this, 'expectExceptionMessage')) {
             $this->expectExceptionMessageRegExp($regExp);
         } elseif (method_exists($this, 'setExpectedException')) {
             $this->setExpectedExceptionRegExp($class, $regExp);

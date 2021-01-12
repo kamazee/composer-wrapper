@@ -1,7 +1,5 @@
 <?php
 
-require_once __DIR__ . '/BaseTestCase.php';
-
 use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\MockObject\MockObject;
 use BaseTestCase as TestCase;
@@ -17,12 +15,6 @@ class ComposerWrapperTest extends TestCase
     {
         $class = self::WRAPPER_CLASS;
         return new $class;
-    }
-
-    public function setUp()
-    {
-        parent::setUp();
-        self::assertTrue(class_exists(self::WRAPPER_CLASS));
     }
 
     /**
@@ -81,7 +73,7 @@ class ComposerWrapperTest extends TestCase
         $wrapper->expects($this->once())->method('unlink');
 
         $installerPathName = $dirWithSpaces . '/composer-setup.php';
-        $this->expectOutputWithShebang(
+        $this->expectOutputString(
             "I was called with $installerPathName --install-dir=$dirWithSpaces"
         );
 
@@ -217,7 +209,7 @@ class ComposerWrapperTest extends TestCase
      */
     public function acceptsDownloadedChecksumWithLineFeed()
     {
-        $this->expectOutputWithShebang('Installer was called and will succeed');
+        $this->expectOutputString('Installer was called and will succeed');
 
         $dir = __DIR__ . '/installer_success';
         $installerFile = $dir . DIRECTORY_SEPARATOR . ComposerWrapper::INSTALLER_FILE;
@@ -250,7 +242,7 @@ class ComposerWrapperTest extends TestCase
      */
     public function throwsOnInstallerFailure()
     {
-        $this->expectOutputWithShebang('Installer was called and will return an error');
+        $this->expectOutputString('Installer was called and will return an error');
         $this->expectExceptionMessageCompat('Exception', ComposerWrapper::MSG_ERROR_WHEN_INSTALLING);
 
         $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
@@ -379,7 +371,7 @@ class ComposerWrapperTest extends TestCase
             ->getMock();
 
         $wrapper->expects($this->never())->method('showError');
-        $this->expectOutputWithShebang('I was called with self-update');
+        $this->expectOutputString('I was called with self-update');
 
         self::callNonPublic($wrapper, 'selfUpdate', array($dirWithSpaces . '/composer.phar'));
     }
@@ -506,8 +498,9 @@ class ComposerWrapperTest extends TestCase
      */
     public function passThroughWrapperWorksWithReferences()
     {
-        $testScriptPath = __DIR__ . '/passthru/error.php';
-        $this->expectOutputWithShebang("$testScriptPath was executed");
+        $testScriptPath = 'passthru/error.php';
+        $testScriptAbsPath = __DIR__ . '/' . $testScriptPath;
+        $this->expectOutputString("$testScriptPath was executed");
         $wrapper = new ComposerWrapper();
         $exitCode = null;
         $class = new ReflectionClass($wrapper);
@@ -516,7 +509,7 @@ class ComposerWrapperTest extends TestCase
         $method->invokeArgs(
             $wrapper,
             array(
-                $wrapper->getPhpBinary() . ' ' . escapeshellarg($testScriptPath),
+                $wrapper->getPhpBinary() . ' ' . escapeshellarg($testScriptAbsPath),
                 &$exitCode
             )
         );
