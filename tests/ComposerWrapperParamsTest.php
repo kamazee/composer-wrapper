@@ -332,7 +332,7 @@ class ComposerWrapperParamsTest extends TestCase
         if (defined('JSON_PRESERVE_ZERO_FRACTION')) {
             $options = JSON_PRESERVE_ZERO_FRACTION;
         }
-        $configWithNonDefaultValues = json_encode(array("config" => array("wrapper" => $wrapperConfig)), $options);
+        $configWithNonDefaultValues = json_encode(array("extra" => array("wrapper" => $wrapperConfig)), $options);
         file_put_contents($json, $configWithNonDefaultValues);
 
         return vfsStream::url('root');
