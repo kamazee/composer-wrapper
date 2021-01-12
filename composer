@@ -67,10 +67,10 @@ if (!class_exists('ComposerWrapper')) {
                 return;
             }
 
-            if (empty($composer['config']['wrapper'])) {
+            if (empty($composer['extra']['wrapper'])) {
                 return;
             }
-            $wrapper = $composer['config']['wrapper'];
+            $wrapper = $composer['extra']['wrapper'];
 
             if (array_key_exists('update-freq', $wrapper)) {
                 $this->setUpdateFreq($wrapper['update-freq']);
