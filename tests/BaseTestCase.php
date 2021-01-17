@@ -33,7 +33,7 @@ class BaseTestCase extends TestCase
         $property->setValue($object, $arg);
     }
 
-    protected static function isolatedEnv(array $env, $callback)
+    protected static function isolatedEnv($callback, array $env, $workingDir = null)
     {
         // php 5.3 doesn't support callable pseudo type hint :(
         if (!is_callable($callback)) {
@@ -44,11 +44,16 @@ class BaseTestCase extends TestCase
         foreach ($env as $name => $value) {
             putenv($name . '=' . self::convertToStringIfFloat($value));
         }
+        $cwd = getcwd();
         try {
-            $callback();
+            if (null !== $workingDir) {
+                chdir($workingDir);
+            }
+            $return = $callback();
         } catch (Exception $e) {
 
         }
+        chdir($cwd);
         foreach ($env as $name => $value) {
             putenv($name);
         }
@@ -56,6 +61,8 @@ class BaseTestCase extends TestCase
         if (isset($e)) {
             throw $e;
         }
+
+        return isset($return) ? $return : null;
     }
 
     protected static function convertToStringIfFloat($value)

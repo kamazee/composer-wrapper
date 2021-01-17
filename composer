@@ -24,16 +24,18 @@ if (!class_exists('ComposerWrapper')) {
          * @var string
          */
         private $composerDir = __DIR__;
-        /**
-         * @var string
-         */
-        private $wrapperDir = __DIR__;
 
-        public function __construct($wrapperDir = null)
+        private $composerJson;
+
+        public function __construct()
         {
-            if (null !== $wrapperDir) {
-                $this->wrapperDir = $wrapperDir;
+            $composerJsonFromEnv = \getenv('COMPOSER');
+            if (\is_string($composerJsonFromEnv) && $composerJsonFromEnv !== '') {
+                $this->composerJson = $composerJsonFromEnv;
+                return;
             }
+
+            $this->composerJson = \getcwd() . DIRECTORY_SEPARATOR . 'composer.json';
         }
 
         public function loadReal()
@@ -59,11 +61,11 @@ if (!class_exists('ComposerWrapper')) {
 
         private function loadComposerJson()
         {
-            $file = $this->wrapperDir . '/composer.json';
+            $file = $this->composerJson;
             // It is the same logic of reading composer.json as is in the Composer
             if (!is_file($file)
                 || !is_readable($file)
-                || !is_array($composer = json_decode(file_get_contents($file),true))) {
+                || !is_array($composer = json_decode(file_get_contents($file), true))) {
                 return;
             }
 
