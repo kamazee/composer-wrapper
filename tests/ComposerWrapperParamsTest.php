@@ -125,7 +125,7 @@ class ComposerWrapperParamsTest extends TestCase
     {
         vfsStream::setup('/root');
         $params = $this->loadParamsDefault();
-        self::assertSame(false, $params->getForceMajorVersion());
+        self::assertNull($params->getForceMajorVersion());
     }
 
     public function forceMajorVersionGoodDataProvider()

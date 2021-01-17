@@ -1,0 +1,18 @@
+Composer Installer
+------------------
+Options
+--help               this help
+--check              for checking environment only
+--force              forces the installation
+--ansi               force ANSI color output
+--no-ansi            disable ANSI color output
+--quiet              do not output unimportant messages
+--install-dir="..."  accepts a target installation directory
+--preview            install the latest version from the preview (alpha/beta/rc) channel instead of stable
+--snapshot           install the latest version from the snapshot (dev builds) channel instead of stable
+--1                  install the latest stable Composer 1.x version
+--2                  install the latest stable Composer 2.x version
+--version="..."      accepts a specific version to install instead of the latest
+--filename="..."     accepts a target filename (default: composer.phar)
+--disable-tls        disable SSL/TLS security for file downloads
+--cafile="..."       accepts a path to a Certificate Authority (CA) certificate file for SSL/TLS verification
