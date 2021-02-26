@@ -32,9 +32,9 @@ class ComposerWrapperTest extends TestCase
     public function runUsesDirFromEnvIfCorrect()
     {
         $self = $this;
-        self::isolatedEnv(array('COMPOSER_DIR' => __DIR__), function () use ($self) {
+        self::isolatedEnv(function () use ($self) {
             $self->runCallsAllRequiredMethods(__DIR__);
-        });
+        }, array('COMPOSER_DIR' => __DIR__));
     }
 
     /**
@@ -519,9 +519,9 @@ class ComposerWrapperTest extends TestCase
 
         $this->expectExceptionMessageCompat('Exception', $expectedExceptionText);
         $self = $this;
-        self::isolatedEnv(array('COMPOSER_DIR' => $composerDir), function () use ($composerDir, $self) {
+        self::isolatedEnv(function () use ($composerDir, $self) {
             $self->runCallsAllRequiredMethods($composerDir, false);
-        });
+        }, array('COMPOSER_DIR' => $composerDir));
     }
 
     public function runCallsAllRequiredMethods($expectedComposerDir, $mockDelegate = true)
