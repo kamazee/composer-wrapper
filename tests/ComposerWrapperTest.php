@@ -2,29 +2,20 @@
 
 use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
+use BaseTestCase as TestCase;
 
 class ComposerWrapperTest extends TestCase
 {
-    const WRAPPER = '../composer';
+
     const WRAPPER_CLASS = 'ComposerWrapper';
+    const WRAPPER_PARAMS_CLASS = 'ComposerWrapperParams';
     const INSTALLER = '<?php die("This is a stub and should never be executed");';
 
-    private static function fullWrapperPath()
-    {
-        return __DIR__ . '/' . self::WRAPPER;
-    }
 
     private static function getInstance()
     {
         $class = self::WRAPPER_CLASS;
         return new $class;
-    }
-
-    public function setUp()
-    {
-        $this->load();
-        $this->assertTrue(class_exists(self::WRAPPER_CLASS));
     }
 
     /**
@@ -40,36 +31,10 @@ class ComposerWrapperTest extends TestCase
      */
     public function runUsesDirFromEnvIfCorrect()
     {
-        putenv(sprintf('COMPOSER_DIR=%s', __DIR__));
-        $this->runCallsAllRequiredMethods(__DIR__);
-    }
-
-    /**
-     * @test
-     * @expectedException Exception
-     * @expectedExceptionMessage is not a dir
-     */
-    public function runThrowsOnMissingDirFromEnv()
-    {
-        $nonExistingDir = __DIR__ . '/i_dont_exist';
-        $expectedError = "$nonExistingDir is not a dir";
-        $this->expectExceptionCompat('Exception', $expectedError);
-
-        putenv("COMPOSER_DIR=$nonExistingDir");
-        self::getInstance()->run();
-    }
-
-    /**
-     * @test
-     */
-    public function runThrowsOnNonDirFromEnv()
-    {
-        $nonDir = __FILE__;
-        $expectedExceptionMessage = "$nonDir is not a dir";
-        $this->expectExceptionCompat('Exception', $expectedExceptionMessage);
-
-        putenv("COMPOSER_DIR=$nonDir");
-        self::getInstance()->run();
+        $self = $this;
+        self::isolatedEnv(function () use ($self) {
+            $self->runCallsAllRequiredMethods(__DIR__);
+        }, array('COMPOSER_DIR' => __DIR__));
     }
 
     /**
@@ -93,6 +58,53 @@ class ComposerWrapperTest extends TestCase
 
     /**
      * @test
+     * @dataProvider installsRequestedMajorVersionExamples
+     */
+    public function installsRequestedMajorVersion($dir, $supportsMajorVersionFlag, $requestedVersion)
+    {
+        $params = $this->getMockBuilder(self::WRAPPER_PARAMS_CLASS)
+            ->setMethods(array('getForceMajorVersion'))
+            ->getMock();
+        $params->expects(self::any())->method('getForceMajorVersion')->willReturn($requestedVersion);
+        $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
+            ->setMethods(array('showError', 'copy', 'verifyChecksum', 'unlink', 'supportsForceVersionFlag'))
+            ->setConstructorArgs(array($params))
+            ->getMock();
+        if ($supportsMajorVersionFlag) {
+            $showErrorExpectation = self::never();
+        } else {
+            $showErrorExpectation = self::once();
+        }
+        $wrapper->expects($showErrorExpectation)->method('showError');
+        $wrapper->expects(self::once())->method('copy')->willReturn(true);
+        $wrapper->expects(self::once())->method('verifyChecksum')->willReturn(null);
+        $wrapper->expects(self::once())->method('unlink')->willReturn(null);
+        $wrapper->expects(self::once())->method('supportsForceVersionFlag')->willReturn($supportsMajorVersionFlag);
+        self::callNonPublic(
+            $wrapper,
+            'installComposer',
+            array($dir)
+        );
+    }
+
+    public static function installsRequestedMajorVersionExamples()
+    {
+        return array(
+            'version 1 is requested; installed supports flag' => array(
+                'dir' => __DIR__ . '/installer_stub_with_major_version_flags',
+                'supportsMajorVersionFlags' => true,
+                'requestedVersion' => 1,
+            ),
+            'version 1 is requested; installed doesn\'t support flag' => array(
+                'dir' => __DIR__ . '/installer_stub_without_major_version_flags',
+                'supportsMajorVersionFlags' => false,
+                'requestedVersion' => 1,
+            ),
+        );
+    }
+
+    /**
+     * @test
      */
     public function installWorksIfPhpIsInDirWithSpaces()
     {
@@ -109,7 +121,7 @@ class ComposerWrapperTest extends TestCase
         $wrapper->expects($this->once())->method('unlink');
 
         $installerPathName = $dirWithSpaces . '/composer-setup.php';
-        $this->expectOutputWithShebang(
+        $this->expectOutputString(
             "I was called with $installerPathName --install-dir=$dirWithSpaces"
         );
 
@@ -158,7 +170,7 @@ class ComposerWrapperTest extends TestCase
             ->with(ComposerWrapper::EXPECTED_INSTALLER_CHECKSUM_URL)
             ->willReturn($downloadResult);
 
-        $this->expectExceptionCompat('Exception', ComposerWrapper::MSG_ERROR_DOWNLOADING_CHECKSUM);
+        $this->expectExceptionMessageCompat('Exception', ComposerWrapper::MSG_ERROR_DOWNLOADING_CHECKSUM);
 
         $mock->installComposer(__DIR__);
     }
@@ -176,7 +188,7 @@ class ComposerWrapperTest extends TestCase
      */
     public function throwsOnFailureToDownloadInstaller()
     {
-        $this->expectExceptionCompat(
+        $this->expectExceptionMessageCompat(
             'Exception',
             ComposerWrapper::MSG_ERROR_DOWNLOADING_INSTALLER
         );
@@ -203,7 +215,7 @@ class ComposerWrapperTest extends TestCase
      */
     public function throwsOnInstallerChecksumMismatch()
     {
-        $this->expectExceptionCompat(
+        $this->expectExceptionMessageCompat(
             'Exception',
             ComposerWrapper::MSG_ERROR_INSTALLER_CHECKSUM_MISMATCH
         );
@@ -245,7 +257,7 @@ class ComposerWrapperTest extends TestCase
      */
     public function acceptsDownloadedChecksumWithLineFeed()
     {
-        $this->expectOutputWithShebang('Installer was called and will succeed');
+        $this->expectOutputString('Installer was called and will succeed');
 
         $dir = __DIR__ . '/installer_success';
         $installerFile = $dir . DIRECTORY_SEPARATOR . ComposerWrapper::INSTALLER_FILE;
@@ -278,8 +290,8 @@ class ComposerWrapperTest extends TestCase
      */
     public function throwsOnInstallerFailure()
     {
-        $this->expectOutputWithShebang('Installer was called and will return an error');
-        $this->expectExceptionCompat('Exception', ComposerWrapper::MSG_ERROR_WHEN_INSTALLING);
+        $this->expectOutputString('Installer was called and will return an error');
+        $this->expectExceptionMessageCompat('Exception', ComposerWrapper::MSG_ERROR_WHEN_INSTALLING);
 
         $mock = $this->getMockBuilder(self::WRAPPER_CLASS)
             ->setMethods(array('file_get_contents', 'copy', 'unlink'))
@@ -407,7 +419,7 @@ class ComposerWrapperTest extends TestCase
             ->getMock();
 
         $wrapper->expects($this->never())->method('showError');
-        $this->expectOutputWithShebang('I was called with self-update');
+        $this->expectOutputString('I was called with self-update');
 
         self::callNonPublic($wrapper, 'selfUpdate', array($dirWithSpaces . '/composer.phar'));
     }
@@ -447,11 +459,18 @@ class ComposerWrapperTest extends TestCase
         $wrapper->expects($this->once())->method('touch')->willReturn(null);
         $wrapper->expects($expectError ? $this->once() : $this->never())->method('showError');
         $self = $this;
-        $wrapper->expects($this->once())->method('passthru')->with()->willReturnCallback(function($command, &$exitCode) use ($self, $flag) {
-            $self->assertStringEndsWith(' self-update' . (null === $flag ? '' : " $flag"), $command);
-            $exitCode = 0;
-        });
-        putenv(ComposerWrapper::ENV_FORCE_VERSION . '=' . $version);
+        $wrapper->expects($this->once())->method('passthru')->with()
+            ->willReturnCallback(
+                function($command, &$exitCode) use ($self, $flag) {
+                    $self->assertStringEndsWith(' self-update' . (null === $flag ? '' : " $flag"), $command);
+                    $exitCode = 0;
+                }
+            );
+
+        $params = new ComposerWrapperParams();
+        $params->setForceMajorVersion($version);
+        self::setNonPublic($wrapper, 'params', $params);
+
         self::callNonPublic($wrapper, 'selfUpdate', array(__FILE__));
     }
 
@@ -498,12 +517,14 @@ class ComposerWrapperTest extends TestCase
         $content = sprintf('<?php throw new Exception("%s");', $expectedExceptionText);
         $composer->setContent($content);
 
-        $this->expectExceptionCompat('Exception', $expectedExceptionText);
-        putenv("COMPOSER_DIR=$composerDir");
-        $this->runCallsAllRequiredMethods($composerDir, false);
+        $this->expectExceptionMessageCompat('Exception', $expectedExceptionText);
+        $self = $this;
+        self::isolatedEnv(function () use ($composerDir, $self) {
+            $self->runCallsAllRequiredMethods($composerDir, false);
+        }, array('COMPOSER_DIR' => $composerDir));
     }
 
-    private function runCallsAllRequiredMethods($expectedComposerDir, $mockDelegate = true)
+    public function runCallsAllRequiredMethods($expectedComposerDir, $mockDelegate = true)
     {
         $methods = array('ensureInstalled', 'ensureExecutable', 'ensureUpToDate');
         if ($mockDelegate) {
@@ -530,8 +551,9 @@ class ComposerWrapperTest extends TestCase
      */
     public function passThroughWrapperWorksWithReferences()
     {
-        $testScriptPath = __DIR__ . '/passthru/error.php';
-        $this->expectOutputWithShebang("$testScriptPath was executed");
+        $testScriptPath = 'passthru/error.php';
+        $testScriptAbsPath = __DIR__ . '/' . $testScriptPath;
+        $this->expectOutputString("$testScriptPath was executed");
         $wrapper = new ComposerWrapper();
         $exitCode = null;
         $class = new ReflectionClass($wrapper);
@@ -540,7 +562,7 @@ class ComposerWrapperTest extends TestCase
         $method->invokeArgs(
             $wrapper,
             array(
-                $wrapper->getPhpBinary() . ' ' . escapeshellarg($testScriptPath),
+                $wrapper->getPhpBinary() . ' ' . escapeshellarg($testScriptAbsPath),
                 &$exitCode
             )
         );
@@ -575,60 +597,40 @@ class ComposerWrapperTest extends TestCase
     public static function selfUpdateHelpProvider()
     {
         return array(
-            'without_version_flags' => array(
+            'self_update_without_version_flags' => array(
                 'helpOutput' => file(__DIR__ . '/self-update_help_examples/without_version_flags.txt'),
                 'versions' => array(1, 2),
                 'expectedResult' => false
             ),
-            'with_version_flags' => array(
+            'self_update_with_version_flags' => array(
                 'helpOutput' => file(__DIR__ . '/self-update_help_examples/with_version_flags.txt'),
                 'versions' => array(1, 2),
                 'expectedResult' => true,
             ),
-            'with_version_flags_without_3' => array(
+            'self_update_with_version_flags_without_3' => array(
                 'helpOutput' => file(__DIR__ . '/self-update_help_examples/with_version_flags.txt'),
                 'versions' => array(3),
                 'expectedResult' => false,
             ),
+            'installer_with_major_version_flag' => array(
+                'helpOutput' => file(__DIR__ . '/installer_stub_with_major_version_flags/help_output.txt'),
+                'versions' => array(1, 2),
+                'expectedResult' => true,
+            ),
+            'installer_with_major_version_flag_wrong_version' => array(
+                'helpOutput' => file(__DIR__ . '/installer_stub_with_major_version_flags/help_output.txt'),
+                'versions' => array(3),
+                'expectedResult' => false,
+            ),
+            'installer_without_major_version_flag' => array(
+                'helpOutput' => file(__DIR__ . '/installer_stub_without_major_version_flags/help_output.txt'),
+                'versions' => array(1, 2),
+                'expectedResult' => false,
+            )
         );
     }
 
-    private function load()
-    {
-        $this->expectOutputWithShebang();
-        return require self::fullWrapperPath();
-    }
 
-    private function expectOutputWithShebang($output = null)
-    {
-        $shebang = $this->getExpectedShebang();
-        $this->expectOutputString($shebang . $output);
-    }
 
-    private function getExpectedShebang()
-    {
-        $wrapperFileLines = file(self::fullWrapperPath());
-        return $wrapperFileLines[0];
-    }
 
-    private function expectExceptionCompat($class, $message)
-    {
-        if (
-            method_exists($this, 'expectExceptionMessage') &&
-            method_exists($this, 'expectException')
-        ) {
-            $this->expectException($class);
-            $this->expectExceptionMessage($message);
-        } elseif (method_exists($this, 'setExpectedException')) {
-            $this->setExpectedException($class, $message);
-        }
-    }
-
-    private static function callNonPublic($object, $method, $args)
-    {
-        $method = new ReflectionMethod($object, $method);
-        $method->setAccessible(true);
-
-        return $method->invokeArgs($object, $args);
-    }
 }

@@ -1,5 +1,5 @@
 <?php
 
-echo __FILE__  . " was executed";
+echo "passthru/error.php was executed";
 
 exit(1);
