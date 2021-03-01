@@ -385,7 +385,7 @@ class ComposerWrapperTest extends TestCase
             ->getMock();
         $wrapper->expects($this->once())
             ->method('passthru')
-            ->with("'{$file->url()}' self-update", $this->anything())
+            ->with("'{$file->url()}' 'self-update'", $this->anything())
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 0; });
 
         self::callNonPublic($wrapper, 'selfUpdate', array($file->url()));
@@ -462,7 +462,7 @@ class ComposerWrapperTest extends TestCase
         $wrapper->expects($this->once())->method('passthru')->with()
             ->willReturnCallback(
                 function($command, &$exitCode) use ($self, $flag) {
-                    $self->assertStringEndsWith(' self-update' . (null === $flag ? '' : " $flag"), $command);
+                    $self->assertStringEndsWith(" 'self-update'" . (null === $flag ? '' : " '$flag'"), $command);
                     $exitCode = 0;
                 }
             );
@@ -495,7 +495,7 @@ class ComposerWrapperTest extends TestCase
             ->getMock();
         $wrapper->expects($this->once())
             ->method('passthru')
-            ->with("'$file' self-update", $this->anything())
+            ->with("'$file' 'self-update'", $this->anything())
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 1; });
         $wrapper->expects($this->once())
             ->method('showError')
@@ -543,7 +543,7 @@ class ComposerWrapperTest extends TestCase
                 ->willReturn(null);
         }
 
-        $runnerMock->run();
+        $runnerMock->run(array());
     }
 
     /**
@@ -567,6 +567,48 @@ class ComposerWrapperTest extends TestCase
             )
         );
         $this->assertEquals(1, $exitCode);
+    }
+
+    /**
+     * @test
+     * @dataProvider detectSelfUpdateDataProvider
+     * @param array $arguments
+     * @param bool $expected
+     */
+    public function detectsSelfUpdate($arguments, $expected)
+    {
+        $wrapper = new ComposerWrapper();
+        $actual = self::callNonPublic($wrapper, 'isSelfUpdate', array($arguments));
+        self::assertSame($expected, $actual);
+    }
+
+    public static function detectSelfUpdateDataProvider()
+    {
+        return array(
+            'selfupdate' => array(array('selfupdate'), true),
+            'self-update' => array(array('self-update'), true),
+            '-v selfupdate' => array(array('-v', 'selfupdate'), true),
+            '-v self-update' => array(array('-v', 'self-update'), true),
+            'no arguments' => array(array(), false),
+            'install' => array(array('install'), false),
+            '-v install' => array(array('-v', 'install'), false),
+        );
+    }
+
+    /**
+     * @test
+     */
+    public function passesThruOnSelfUpdate()
+    {
+        $mock = $this->getMockBuilder('ComposerWrapper')
+            ->setMethods(array('runByRealComposerSubprocess', 'delegate', 'ensureInstalled', 'ensureExecutable'))
+            ->getMock();
+        $mock->expects(self::once())->method('ensureInstalled')->willReturn(true);
+        $mock->expects(self::once())->method('ensureExecutable')->willReturn(true);
+        $mock->expects(self::never())->method('delegate');
+        $mock->expects(self::once())->method('runByRealComposerSubprocess')->willReturn(0);
+        $exitCode = $mock->run(array('self-update'));
+        self::assertSame(0, $exitCode);
     }
 
     /**
@@ -629,8 +671,4 @@ class ComposerWrapperTest extends TestCase
             )
         );
     }
-
-
-
-
 }
