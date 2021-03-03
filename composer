@@ -8,7 +8,7 @@
  * If it breaks, check out newer version or report an issue at
  * https://github.com/kamazee/composer-wrapper
  *
- * @version 1.2.0
+ * @version 1.2.1
  */
 if (!class_exists('ComposerWrapper')) {
     class ComposerWrapperParams {
@@ -397,12 +397,8 @@ if (!class_exists('ComposerWrapper')) {
 
         protected function selfUpdate($filename)
         {
-            $selfUpdateCommand = \sprintf('%s self-update', \escapeshellarg($filename));
-            $selfUpdateCommand .= $this->getSelfUpdateFlags($filename);
-            $this->passthru(
-                $selfUpdateCommand,
-                $exitCode
-            );
+            $arguments = array_merge(array('self-update'), $this->getSelfUpdateFlags($filename));
+            $exitCode = $this->runByRealComposerSubprocess($filename, $arguments);
 
             // composer exits both when self-update downloaded a new version
             // and when no new version was available (and everything went OK)
@@ -414,10 +410,26 @@ if (!class_exists('ComposerWrapper')) {
             }
         }
 
+        public function runByRealComposerSubprocess($filename, array $arguments)
+        {
+            $command = \escapeshellarg($filename);
+
+            if (count($arguments) > 0) {
+                $command .= ' ' . implode(' ', array_map('escapeshellarg', $arguments));
+            }
+
+            $this->passthru(
+                $command,
+                $exitCode
+            );
+
+            return $exitCode;
+        }
+
         private function getSelfUpdateFlags($filename)
         {
             $forceVersionRequested = $this->params->getForceMajorVersion();
-            $flags = '';
+            $flags = array();
             if (null === $forceVersionRequested) {
                 return $flags;
             }
@@ -432,10 +444,10 @@ if (!class_exists('ComposerWrapper')) {
             $command = implode(' ', $commandParts);
 
             if ($this->supportsForceVersionFlag($command, $forceVersionRequested)) {
-                $flags .= " --$forceVersionRequested";
+                $flags[] = "--$forceVersionRequested";
             } elseif (1 == $forceVersionRequested) {
                 // 1.10.5 supports flags, so should be a good intermediate version
-                $flags .= ' 1.10.5';
+                $flags[] = '1.10.5';
             } else {
                 $this->showError(
                     "Forcing version $forceVersionRequested is requested but current composer version doesn't support --$forceVersionRequested flag, so nothing will be forced."
@@ -489,16 +501,39 @@ if (!class_exists('ComposerWrapper')) {
             \fwrite(STDERR, $text . "\n");
         }
 
+        protected function isSelfUpdate($cliArguments)
+        {
+            foreach ($cliArguments as $cliArgument) {
+                if ('-' === \substr($cliArgument, 0, 1)) {
+                    continue;
+                }
+
+                // If the first argument that is not a CLI option (i.e. not starts with dash, '-'),
+                // and it's self-update, it should be run in a subprocess rather than delegated
+                // because otherwise wrapper will be replaced
+                if ('self-update' === $cliArgument || 'selfupdate' === $cliArgument) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /**
          * @throws Exception
          */
-        public function run()
+        public function run($cliArguments)
         {
             $this->params->loadReal();
             $composerPathName = "{$this->params->getComposerDir()}/composer.phar";
 
             $this->ensureInstalled($composerPathName);
             $this->ensureExecutable($composerPathName);
+
+            if ($this->isSelfUpdate($cliArguments)) {
+                return $this->runByRealComposerSubprocess($composerPathName, $cliArguments);
+            }
+
             $this->ensureUpToDate($composerPathName);
             $this->delegate($composerPathName);
         }
@@ -509,7 +544,10 @@ if ('cli' === \PHP_SAPI && @\realpath($_SERVER['argv'][0]) === __FILE__) {
     $runner = new ComposerWrapper();
 
     try {
-        $runner->run();
+        $exitCode = $runner->run(\array_slice($_SERVER['argv'], 1));
+        if (null !== $exitCode) {
+            exit($exitCode);
+        }
     } catch (Exception $e) {
         $runner->showError('ERROR: ' . $e->getMessage());
         exit($e->getCode());
