@@ -631,7 +631,7 @@ class ComposerWrapperTest extends TestCase
 
             $this->assertSame(
                 $expectedResult,
-                self::callNonPublic($mock, 'supportsForceVersionFlag', array('composer', $version))
+                self::callNonPublic($mock, 'supportsForceVersionFlag', array(array('composer'), $version))
             );
         }
     }

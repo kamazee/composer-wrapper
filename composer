@@ -13,7 +13,7 @@
 if (!class_exists('ComposerWrapper')) {
     class ComposerWrapperParams {
         /**
-         * @var int|null
+         * @var string|null
          */
         private $forceMajorVersion;
         /**
@@ -86,7 +86,7 @@ if (!class_exists('ComposerWrapper')) {
         }
 
         /**
-         * @return int|null
+         * @return string|null
          */
         public function getForceMajorVersion()
         {
@@ -94,20 +94,11 @@ if (!class_exists('ComposerWrapper')) {
         }
 
         /**
-         * @param false|int $version
+         * @param false|string $version
          */
         public function setForceMajorVersion($version)
         {
-            $allowed = array("1", 1, "2", 2);
-            if (false === in_array($version, $allowed, true)) {
-                throw new Exception(
-                    sprintf(
-                        'Wrong major version is requested: "%s"; only 1 and 2 are supported in string or integer format',
-                        $version
-                    )
-                );
-            }
-            $this->forceMajorVersion = (int) $version;
+            $this->forceMajorVersion = (string) $version;
         }
 
         /**
@@ -217,15 +208,22 @@ if (!class_exists('ComposerWrapper')) {
             return \call_user_func_array('touch', \func_get_args());
         }
 
-        protected function supportsForceVersionFlag($command, $version)
+        /**
+         * @param array $arrayCommand
+         * @param string $version
+         * @return bool
+         * @throws Exception
+         */
+        protected function supportsForceVersionFlag($arrayCommand, $version)
         {
+            $command = implode(' ', $arrayCommand);
             try {
                 $php = \escapeshellarg($this->getPhpBinary());
                 $output = $this->getCliCallOutput($php . ' ' . $command);
             } catch (Exception $e) {
                 throw new \Exception(
                     'Error when trying to check support for forcing ' .
-                    'specific major version on self-update',
+                    'specific major version on either self-update or installer',
                     0,
                     $e
                 );
@@ -279,13 +277,13 @@ if (!class_exists('ComposerWrapper')) {
             $majorVersion = $this->params->getForceMajorVersion();
             $majorVersionFlag = null;
             if (null !== $majorVersion) {
-                $helpCommandParts = array(
+                $installerHelpCommand = array(
                     \escapeshellarg($installerPathName),
                     '--no-ansi',
                     '--help',
                 );
-                $helpCommand = implode(' ', $helpCommandParts);
-                if ($this->supportsForceVersionFlag($helpCommand, $majorVersion)) {
+
+                if ($this->supportsForceVersionFlag($installerHelpCommand, $majorVersion)) {
                     $majorVersionFlag = '--' . $majorVersion;
                 } else {
                     $this->showError(
@@ -434,16 +432,14 @@ if (!class_exists('ComposerWrapper')) {
                 return $flags;
             }
 
-            $commandParts = array(
+            $selfUpdateHelpCommand = array(
                 \escapeshellarg($filename),
                 '--no-ansi',
                 'help',
                 'self-update',
             );
 
-            $command = implode(' ', $commandParts);
-
-            if ($this->supportsForceVersionFlag($command, $forceVersionRequested)) {
+            if ($this->supportsForceVersionFlag($selfUpdateHelpCommand, $forceVersionRequested)) {
                 $flags[] = "--$forceVersionRequested";
             } elseif (1 == $forceVersionRequested) {
                 // 1.10.5 supports flags, so should be a good intermediate version
