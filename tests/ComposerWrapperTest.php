@@ -468,7 +468,7 @@ class ComposerWrapperTest extends TestCase
             );
 
         $params = new ComposerWrapperParams();
-        $params->setForceMajorVersion($version);
+        $params->setChannel($version);
         self::setNonPublic($wrapper, 'params', $params);
 
         self::callNonPublic($wrapper, 'selfUpdate', array(__FILE__));

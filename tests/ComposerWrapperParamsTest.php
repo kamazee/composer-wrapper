@@ -26,7 +26,7 @@ class ComposerWrapperParamsTest extends TestCase
         );
 
         self::assertSame("101 days", $params->getUpdateFreq());
-        self::assertSame("2", $params->getForceMajorVersion());
+        self::assertSame("2", $params->getChannel());
         self::assertSame("dir_from_env", $params->getComposerDir());
     }
 
@@ -48,7 +48,7 @@ class ComposerWrapperParamsTest extends TestCase
         );
 
         self::assertSame('101 days', $params->getUpdateFreq());
-        self::assertSame('2', $params->getForceMajorVersion());
+        self::assertSame('2', $params->getChannel());
         self::assertSame('dir_from_composer-from-env.json', $params->getComposerDir());
     }
 
@@ -108,7 +108,7 @@ class ComposerWrapperParamsTest extends TestCase
     public function forceMajorVersionLoadDefault()
     {
         $params = $this->loadParamsDefault();
-        self::assertNull($params->getForceMajorVersion());
+        self::assertNull($params->getChannel());
     }
 
 

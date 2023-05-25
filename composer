@@ -8,14 +8,14 @@
  * If it breaks, check out newer version or report an issue at
  * https://github.com/kamazee/composer-wrapper
  *
- * @version 1.2.1
+ * @version 1.3.0
  */
 if (!class_exists('ComposerWrapper')) {
     class ComposerWrapperParams {
         /**
          * @var string|null
          */
-        private $forceMajorVersion;
+        private $channel;
         /**
          * @var string
          */
@@ -51,8 +51,8 @@ if (!class_exists('ComposerWrapper')) {
             if ( false !== $value = \getenv('COMPOSER_UPDATE_FREQ')) {
                 $this->setUpdateFreq($value);
             }
-            if ( false !== $value = \getenv('COMPOSER_FORCE_MAJOR_VERSION')) {
-                $this->setForceMajorVersion($value);
+            if ( false !== $value = \getenv('COMPOSER_CHANNEL')) {
+                $this->setChannel($value);
             }
             if ( false !== $value = \getenv('COMPOSER_DIR')) {
                 $this->setComposerDir($value);
@@ -77,8 +77,8 @@ if (!class_exists('ComposerWrapper')) {
             if (array_key_exists('update-freq', $wrapper)) {
                 $this->setUpdateFreq($wrapper['update-freq']);
             }
-            if (array_key_exists('major-version', $wrapper)) {
-                $this->setForceMajorVersion($wrapper['major-version']);
+            if (array_key_exists('channel', $wrapper)) {
+                $this->setChannel($wrapper['channel']);
             }
             if (array_key_exists('composer-dir', $wrapper)) {
                 $this->setComposerDir($wrapper['composer-dir']);
@@ -88,17 +88,17 @@ if (!class_exists('ComposerWrapper')) {
         /**
          * @return string|null
          */
-        public function getForceMajorVersion()
+        public function getChannel()
         {
-            return $this->forceMajorVersion;
+            return $this->channel;
         }
 
         /**
-         * @param false|string $version
+         * @param false|string $channel
          */
-        public function setForceMajorVersion($version)
+        public function setChannel($channel)
         {
-            $this->forceMajorVersion = (string) $version;
+            $this->channel = (string) $channel;
         }
 
         /**
@@ -210,11 +210,10 @@ if (!class_exists('ComposerWrapper')) {
 
         /**
          * @param array $arrayCommand
-         * @param string $version
+         * @param string $channel
          * @return bool
-         * @throws Exception
          */
-        protected function supportsForceVersionFlag($arrayCommand, $version)
+        protected function supportsChannelFlag($arrayCommand, $channel)
         {
             $command = implode(' ', $arrayCommand);
             try {
@@ -223,7 +222,7 @@ if (!class_exists('ComposerWrapper')) {
             } catch (Exception $e) {
                 throw new \Exception(
                     'Error when trying to check support for forcing ' .
-                    'specific major version on either self-update or installer',
+                    'specific channel on either self-update or installer',
                     0,
                     $e
                 );
@@ -231,7 +230,7 @@ if (!class_exists('ComposerWrapper')) {
 
             foreach ($output as $line) {
                 $line = trim($line);
-                if (0 === strpos($line, "--$version ")) {
+                if (0 === strpos($line, "--$channel ")) {
                     return true;
                 }
             }
@@ -274,23 +273,23 @@ if (!class_exists('ComposerWrapper')) {
 
             $this->verifyChecksum($installerPathName);
 
-            $majorVersion = $this->params->getForceMajorVersion();
-            $majorVersionFlag = null;
-            if (null !== $majorVersion) {
+            $requestedChannel = $this->params->getChannel();
+            $channelFlag = null;
+            if (null !== $requestedChannel) {
                 $installerHelpCommand = array(
                     \escapeshellarg($installerPathName),
                     '--no-ansi',
                     '--help',
                 );
 
-                if ($this->supportsForceVersionFlag($installerHelpCommand, $majorVersion)) {
-                    $majorVersionFlag = '--' . $majorVersion;
+                if ($this->supportsChannelFlag($installerHelpCommand, $requestedChannel)) {
+                    $channelFlag = '--' . $requestedChannel;
                 } else {
                     $this->showError(
-                        "Installer doesn't allow to specify major version.\n" .
-                        "Requested major version $majorVersion flag is ignored.\n" .
+                        "Installer doesn't allow to specify channel or channel is wrong.\n" .
+                        "Requested channel $requestedChannel flag is ignored.\n" .
                         "The installer's default is going to be installed.\n" .
-                        "Please remove major version requirement from wrapper's environment variables or extra.wrapper section of composer.json file (as installer doesn't seem to support major version flags anymore), or report an issue at https://github.com/kamazee/composer-wrapper/issues is you think it does and the support is not detected properly"
+                        "Please remove channel requirement from wrapper's environment variables or extra.wrapper section of composer.json file (as installer doesn't seem to support channel flags anymore), or report an issue at https://github.com/kamazee/composer-wrapper/issues is you think it does and the support is not detected properly"
                     );
                 }
             }
@@ -302,8 +301,8 @@ if (!class_exists('ComposerWrapper')) {
                 '--install-dir=' . \escapeshellarg($dir),
             );
 
-            if (null !== $majorVersionFlag) {
-                $commandParts[] = $majorVersionFlag;
+            if (null !== $channelFlag) {
+                $commandParts[] = $channelFlag;
             }
 
             $this->passthru(
@@ -426,9 +425,9 @@ if (!class_exists('ComposerWrapper')) {
 
         private function getSelfUpdateFlags($filename)
         {
-            $forceVersionRequested = $this->params->getForceMajorVersion();
+            $channelRequested = $this->params->getChannel();
             $flags = array();
-            if (null === $forceVersionRequested) {
+            if (null === $channelRequested) {
                 return $flags;
             }
 
@@ -439,14 +438,14 @@ if (!class_exists('ComposerWrapper')) {
                 'self-update',
             );
 
-            if ($this->supportsForceVersionFlag($selfUpdateHelpCommand, $forceVersionRequested)) {
-                $flags[] = "--$forceVersionRequested";
-            } elseif (1 == $forceVersionRequested) {
-                // 1.10.5 supports flags, so should be a good intermediate version
+            if ($this->supportsChannelFlag($selfUpdateHelpCommand, $channelRequested)) {
+                $flags[] = "--$channelRequested";
+            } elseif (1 == $channelRequested) {
+                // 1.10.5 supports channel flags, so should be a good intermediate version
                 $flags[] = '1.10.5';
             } else {
                 $this->showError(
-                    "Forcing version $forceVersionRequested is requested but current composer version doesn't support --$forceVersionRequested flag, so nothing will be forced."
+                    "Forcing channel $channelRequested is requested but current composer version doesn't support --$channelRequested flag, so nothing will be forced."
                 );
             }
 
