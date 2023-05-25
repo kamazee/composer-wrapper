@@ -19,7 +19,7 @@ class ComposerWrapperParamsTest extends TestCase
             },
             array(
                 "COMPOSER_UPDATE_FREQ" => "101 days",
-                "COMPOSER_FORCE_MAJOR_VERSION" => 2,
+                "COMPOSER_CHANNEL" => 2,
                 "COMPOSER_DIR" => 'dir_from_env',
             ),
             __DIR__ . '/composer.json_read_config_examples/envVariablesHasBiggerPriority'
