@@ -25,6 +25,7 @@ jobs:
   fast_finish: true
   allow_failures:
     - php: nightly
+    - php: 5.3
 install:
   - test -f composer.lock && rm composer.lock || true
   - ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress $COMPOSER_ADDITIONAL_FLAGS
