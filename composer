@@ -180,7 +180,12 @@ if (!class_exists('ComposerWrapper')) {
 
         public function __construct(ComposerWrapperParams $params = null)
         {
-            $this->params = null === $params ? new ComposerWrapperParams() : $params;
+            if (null === $params ) {
+                $this->params = new ComposerWrapperParams();
+                $this->params->loadReal();
+            } else {
+                $this->params = $params;
+            }
         }
 
         protected function file_get_contents()
@@ -519,7 +524,6 @@ if (!class_exists('ComposerWrapper')) {
          */
         public function run($cliArguments)
         {
-            $this->params->loadReal();
             $composerPathName = "{$this->params->getComposerDir()}/composer.phar";
 
             $this->ensureInstalled($composerPathName);

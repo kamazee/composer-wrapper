@@ -2,7 +2,7 @@
   "extra": {
     "wrapper": {
       "update-freq": "101 days",
-      "major-version": 2,
+      "channel": 2,
       "composer-dir": "dir_from_composer-from-env.json"
     }
   }
