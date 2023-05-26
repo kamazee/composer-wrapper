@@ -13,7 +13,7 @@ php:
   - 7.4
   - 8.0
   - 8.1
-  - 8.2
+
 jobs:
   include:
     - php: 5.3
@@ -22,6 +22,12 @@ jobs:
       dist: trusty
     - php: 5.5
       dist: trusty
+    - php: 8.2
+      dist: focal
+      addons:
+        apt:
+          packages:
+            - libonig5
     - php: nightly
       env: COMPOSER_ADDITIONAL_FLAGS=--ignore-platform-reqs
   fast_finish: true
