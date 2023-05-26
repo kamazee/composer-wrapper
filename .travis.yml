@@ -11,13 +11,12 @@ jobs:
       git:
         depth: false
       before_install:
-        - phpenv config-rm xdebug.ini
         - curl -o /cafile.pem http://curl.haxx.se/ca/cacert.pem
         - echo 'openssl.cafile=/cafile.pem' >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   fast_finish: true
 install:
   - test -f composer.lock && rm composer.lock || true
-  - ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress $COMPOSER_ADDITIONAL_FLAGS
+  - COMPOSER_CAFILE=/cafile ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress $COMPOSER_ADDITIONAL_FLAGS
 before_install:
   - phpenv config-rm xdebug.ini
 script:
