@@ -10,11 +10,10 @@ jobs:
       dist: precise
       git:
         depth: false
-      env:
-        - SSL_CERT_FILE=/cafile.pem
       before_install:
         - phpenv config-rm xdebug.ini
         - curl -o /cafile.pem http://curl.haxx.se/ca/cacert.pem
+        - echo 'openssl.cafile=/cafile.pem' >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
   fast_finish: true
 install:
   - test -f composer.lock && rm composer.lock || true
