@@ -4,31 +4,18 @@ dist: xenial
 cache:
   directories:
     - $HOME/.composer/cache
-php:
-  - 5.6
-  - 7.0
-  - 7.1
-  - 7.2
-  - 7.3
-  - 7.4
-  - 8.0
 jobs:
   include:
     - php: 5.3
       dist: precise
       git:
         depth: false
-    - php: 5.4
-      dist: trusty
-    - php: 5.5
-      dist: trusty
-    - php: nightly
-      env: COMPOSER_ADDITIONAL_FLAGS=--ignore-platform-reqs
   fast_finish: true
-  allow_failures:
-    - php: nightly
 install:
   - test -f composer.lock && rm composer.lock || true
   - ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-suggest --no-progress $COMPOSER_ADDITIONAL_FLAGS
+before_script:
+  - phpenv config-rm xdebug.ini
+  - php -r '$cert_locations = openssl_get_cert_locations(); echo $cert_locations["ini_cafile"], " ", $cert_locations["default_cert_file"], PHP_EOL;'
 script:
   - ./vendor/bin/phpunit
