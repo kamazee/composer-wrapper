@@ -8,7 +8,6 @@ class ComposerWrapperTest extends TestCase
 {
 
     const WRAPPER_CLASS = 'ComposerWrapper';
-    const WRAPPER_PARAMS_CLASS = 'ComposerWrapperParams';
     const INSTALLER = '<?php die("This is a stub and should never be executed");';
 
 
@@ -58,19 +57,17 @@ class ComposerWrapperTest extends TestCase
 
     /**
      * @test
-     * @dataProvider installsRequestedMajorVersionExamples
+     * @dataProvider installsRequestedChannelExamples
      */
-    public function installsRequestedMajorVersion($dir, $supportsMajorVersionFlag, $requestedVersion)
+    public function installsRequestedChannel($dir, $supportsChannelFlag, $requestedChannel)
     {
-        $params = $this->getMockBuilder(self::WRAPPER_PARAMS_CLASS)
-            ->setMethods(array('getForceMajorVersion'))
-            ->getMock();
-        $params->expects(self::any())->method('getForceMajorVersion')->willReturn($requestedVersion);
+        $params = new ComposerWrapperParams();
+        $params->setChannel($requestedChannel);
         $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
-            ->setMethods(array('showError', 'copy', 'verifyChecksum', 'unlink', 'supportsForceVersionFlag'))
+            ->setMethods(array('showError', 'copy', 'verifyChecksum', 'unlink', 'supportsChannelFlag'))
             ->setConstructorArgs(array($params))
             ->getMock();
-        if ($supportsMajorVersionFlag) {
+        if ($supportsChannelFlag) {
             $showErrorExpectation = self::never();
         } else {
             $showErrorExpectation = self::once();
@@ -79,7 +76,7 @@ class ComposerWrapperTest extends TestCase
         $wrapper->expects(self::once())->method('copy')->willReturn(true);
         $wrapper->expects(self::once())->method('verifyChecksum')->willReturn(null);
         $wrapper->expects(self::once())->method('unlink')->willReturn(null);
-        $wrapper->expects(self::once())->method('supportsForceVersionFlag')->willReturn($supportsMajorVersionFlag);
+        $wrapper->expects(self::once())->method('supportsChannelFlag')->willReturn($supportsChannelFlag);
         self::callNonPublic(
             $wrapper,
             'installComposer',
@@ -87,17 +84,17 @@ class ComposerWrapperTest extends TestCase
         );
     }
 
-    public static function installsRequestedMajorVersionExamples()
+    public static function installsRequestedChannelExamples()
     {
         return array(
             'version 1 is requested; installed supports flag' => array(
                 'dir' => __DIR__ . '/installer_stub_with_major_version_flags',
-                'supportsMajorVersionFlags' => true,
+                'supportsChannelFlags' => true,
                 'requestedVersion' => 1,
             ),
             'version 1 is requested; installed doesn\'t support flag' => array(
                 'dir' => __DIR__ . '/installer_stub_without_major_version_flags',
-                'supportsMajorVersionFlags' => false,
+                'supportsChannelFlags' => false,
                 'requestedVersion' => 1,
             ),
         );
@@ -452,10 +449,10 @@ class ComposerWrapperTest extends TestCase
     public function addsForceVersionFlag($version, $supportsFlags, $flag, $expectError = false)
     {
         $wrapper = $this->getMockBuilder(self::WRAPPER_CLASS)
-            ->setMethods(array('supportsForceVersionFlag', 'touch', 'passthru', 'showError'))
+            ->setMethods(array('supportsChannelFlag', 'touch', 'passthru', 'showError'))
             ->getMock();
 
-        $wrapper->expects($this->once())->method('supportsForceVersionFlag')->willReturn($supportsFlags);
+        $wrapper->expects($this->once())->method('supportsChannelFlag')->willReturn($supportsFlags);
         $wrapper->expects($this->once())->method('touch')->willReturn(null);
         $wrapper->expects($expectError ? $this->once() : $this->never())->method('showError');
         $self = $this;
@@ -468,7 +465,7 @@ class ComposerWrapperTest extends TestCase
             );
 
         $params = new ComposerWrapperParams();
-        $params->setForceMajorVersion($version);
+        $params->setChannel($version);
         self::setNonPublic($wrapper, 'params', $params);
 
         self::callNonPublic($wrapper, 'selfUpdate', array(__FILE__));
@@ -631,7 +628,7 @@ class ComposerWrapperTest extends TestCase
 
             $this->assertSame(
                 $expectedResult,
-                self::callNonPublic($mock, 'supportsForceVersionFlag', array('composer', $version))
+                self::callNonPublic($mock, 'supportsChannelFlag', array(array('composer'), $version))
             );
         }
     }

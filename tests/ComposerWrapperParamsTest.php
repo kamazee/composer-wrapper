@@ -19,14 +19,14 @@ class ComposerWrapperParamsTest extends TestCase
             },
             array(
                 "COMPOSER_UPDATE_FREQ" => "101 days",
-                "COMPOSER_FORCE_MAJOR_VERSION" => 2,
+                "COMPOSER_CHANNEL" => 2,
                 "COMPOSER_DIR" => 'dir_from_env',
             ),
             __DIR__ . '/composer.json_read_config_examples/envVariablesHasBiggerPriority'
         );
 
         self::assertSame("101 days", $params->getUpdateFreq());
-        self::assertSame(2, $params->getForceMajorVersion());
+        self::assertSame("2", $params->getChannel());
         self::assertSame("dir_from_env", $params->getComposerDir());
     }
 
@@ -48,7 +48,7 @@ class ComposerWrapperParamsTest extends TestCase
         );
 
         self::assertSame('101 days', $params->getUpdateFreq());
-        self::assertSame(2, $params->getForceMajorVersion());
+        self::assertSame('2', $params->getChannel());
         self::assertSame('dir_from_composer-from-env.json', $params->getComposerDir());
     }
 
@@ -108,51 +108,9 @@ class ComposerWrapperParamsTest extends TestCase
     public function forceMajorVersionLoadDefault()
     {
         $params = $this->loadParamsDefault();
-        self::assertNull($params->getForceMajorVersion());
+        self::assertNull($params->getChannel());
     }
 
-    public function forceMajorVersionGoodDataProvider()
-    {
-        return array(
-            "1 as int" => array(1, 1),
-            "1 as string" => array("1", 1),
-            "2 as int" => array(2, 2),
-            "2 as string" => array("2", 2),
-        );
-    }
-
-    /**
-     * @test
-     * @dataProvider forceMajorVersionGoodDataProvider
-     */
-    public function setForceMajorVersionHandlesGoodValues($input, $expected)
-    {
-        $params = new ComposerWrapperParams();
-        self::callNonPublic($params, 'setForceMajorVersion', array($input));
-        $actual = $params->getForceMajorVersion();
-        self::assertSame($expected, $actual);
-    }
-
-    public function forceMajorVersionBadDataProvider()
-    {
-        return array(
-            "negative" => array(-1),
-            "allowed versions but not in float" => array(1.0),
-            "positive more than 2 " => array(3),
-            "zero " => array(0),
-        );
-    }
-
-    /**
-     * @test
-     * @dataProvider forceMajorVersionBadDataProvider
-     */
-    public function forceMajorVersionThrowsOnBadValues($input)
-    {
-        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong major version is requested:.*/');
-        $params = new ComposerWrapperParams();
-        self::callNonPublic($params, 'setForceMajorVersion', array($input));
-    }
 
     /**
      * @test
