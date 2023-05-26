@@ -13,6 +13,7 @@ jobs:
       before_install:
         - curl -o /cafile.pem http://curl.haxx.se/ca/cacert.pem
         - echo 'openssl.cafile=/cafile.pem' >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
+        - "sed 's/  },/}, \"config\": {\"disable-tls\": true}},/' composer.json"
   fast_finish: true
 install:
   - test -f composer.lock && rm composer.lock || true
