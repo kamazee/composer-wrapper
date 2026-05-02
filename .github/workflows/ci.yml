@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental || false }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: "5.3"
+          - php: "5.4"
+          - php: "5.5"
+          - php: "5.6"
+          - php: "7.0"
+          - php: "7.1"
+          - php: "7.2"
+          - php: "7.3"
+          - php: "7.4"
+          - php: "8.0"
+          - php: "8.1"
+          - php: "8.2"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/composer
+          key: composer-${{ runner.os }}-${{ matrix.php }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            composer-${{ runner.os }}-${{ matrix.php }}-
+            composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        env:
+          COMPOSER_ADDITIONAL_FLAGS: ${{ matrix.composer_additional_flags }}
+        run: |
+          test -f composer.lock && rm composer.lock || true
+          ./composer update --ansi --prefer-dist --no-interaction --optimize-autoloader --no-progress ${COMPOSER_ADDITIONAL_FLAGS}
+
+      - name: Run tests
+        run: ./vendor/bin/phpunit
