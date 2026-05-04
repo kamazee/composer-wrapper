@@ -386,7 +386,7 @@ class ComposerWrapperTest extends TestCase
             ->willReturnCallback(function ($command, &$exitCode) { $exitCode = 0; });
 
         self::callNonPublic($wrapper, 'selfUpdate', array($file->url()));
-        clearstatcache(null, $file->url());
+        clearstatcache(true, $file->url());
         $this->assertGreaterThanOrEqual($now->getTimestamp(), filemtime($file->url()));
     }
 
@@ -555,7 +555,9 @@ class ComposerWrapperTest extends TestCase
         $exitCode = null;
         $class = new ReflectionClass($wrapper);
         $method = $class->getMethod('passthru');
-        $method->setAccessible(true);
+        if (PHP_VERSION_ID < 80500) {
+            $method->setAccessible(true);
+        }
         $method->invokeArgs(
             $wrapper,
             array(

@@ -118,9 +118,19 @@ if (!class_exists('ComposerWrapper')) {
             $modified = clone $now;
 
             //hack: DateTime $modifier argument validation. Taken from https://stackoverflow.com/a/34899724/2165434
-            $success = @$modified->modify($updateFreq);
+            try {
+                $success = @$modified->modify($updateFreq);
+            } catch (\Exception $e) {
+                $success = false;
+            }
             if ($success === false) {
-                throw new \Exception(sprintf('Wrong update frequency is requested: %s; should be valid DateTime modifier (follow %s for the help)', $updateFreq,'https://www.php.net/manual/en/datetime.modify.php'));
+                throw new \Exception(
+                    sprintf(
+                        'Wrong update frequency is requested: %s; should be valid DateTime modifier (follow %s for the help)',
+                        $updateFreq,
+                        'https://www.php.net/manual/en/datetime.modify.php'
+                    )
+                );
             }
             //endhack
 
