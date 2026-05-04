@@ -20,6 +20,48 @@ class ComposerWrapperTest extends TestCase
     /**
      * @test
      */
+    public function acceptsParameters()
+    {
+        try {
+            new ComposerWrapper(new ComposerWrapperParams());
+            new ComposerWrapper();
+            new ComposerWrapper(null);
+            $passed = true;
+        } catch (Exception $e) {
+            $passed = false;
+        }
+        self::assertTrue($passed);
+    }
+
+    /**
+     * @test
+     * @dataProvider invalidConstructorArguments
+     */
+    public function throwsOnInvalidParameters(array $args)
+    {
+        $this->expectExceptionMessageCompat(
+            'InvalidArgumentException',
+            'ComposerWrapper class can only be instantiated with ComposerWrapperParams object'
+        );
+        $class = new ReflectionClass('ComposerWrapper');
+        $class->newInstanceArgs($args);
+    }
+
+    public static function invalidConstructorArguments()
+    {
+        return array(
+            array(array('test')),
+            array(array(new \stdClass())),
+            array(array(true)),
+            array(array(false)),
+            array(array(123)),
+            array(array(123.45)),
+        );
+    }
+
+    /**
+     * @test
+     */
     public function runUsesCorrectDefaultDir()
     {
         $this->runCallsAllRequiredMethods(dirname(__DIR__));

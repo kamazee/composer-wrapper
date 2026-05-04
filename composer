@@ -188,13 +188,20 @@ if (!class_exists('ComposerWrapper')) {
          */
         protected $params;
 
-        public function __construct(ComposerWrapperParams $params = null)
+        public function __construct($params = null)
         {
-            if (null === $params ) {
+            if (null === $params) {
                 $this->params = new ComposerWrapperParams();
                 $this->params->loadReal();
-            } else {
+            } elseif ($params instanceof ComposerWrapperParams) {
                 $this->params = $params;
+            } else {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        "%s class can only be instantiated with ComposerWrapperParams object",
+                        __CLASS__
+                    )
+                );
             }
         }
 
