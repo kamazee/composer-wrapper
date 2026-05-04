@@ -20,7 +20,9 @@ class BaseTestCase extends TestCase
     public static function callNonPublic($object, $method, $args)
     {
         $method = new ReflectionMethod($object, $method);
-        $method->setAccessible(true);
+        if (PHP_VERSION_ID < 80500) {
+            $method->setAccessible(true);
+        }
 
         return $method->invokeArgs($object, $args);
     }
@@ -28,7 +30,9 @@ class BaseTestCase extends TestCase
     protected static function setNonPublic($object, $property, $arg)
     {
         $property = new ReflectionProperty($object, $property);
-        $property->setAccessible(true);
+        if (PHP_VERSION_ID < 80500) {
+            $property->setAccessible(true);
+        }
 
         $property->setValue($object, $arg);
     }

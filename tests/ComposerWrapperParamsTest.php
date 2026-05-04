@@ -132,10 +132,9 @@ class ComposerWrapperParamsTest extends TestCase
         self::assertSame(__DIR__, $actual);
     }
 
-    public function composerDirBadDataProvider()
+    public static function composerDirBadDataProvider()
     {
         return array(
-            "access denied" => array('/var'),
             "doesn't exists" => array(__DIR__ . '/i_dont_exist'),
             "non dir" => array(__FILE__),
         );
@@ -150,6 +149,20 @@ class ComposerWrapperParamsTest extends TestCase
         $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong composer dir is requested:.*/');
         $params = new ComposerWrapperParams();
         self::callNonPublic($params, 'setComposerDir', array($input));
+    }
+
+    /**
+     * @test
+     */
+    public function setComposerDirThrowsOnNotWritableDirectory()
+    {
+        $root = vfsStream::setup();
+        $dir = vfsStream::newDirectory('readonly', 0555);
+        $root->addChild($dir);
+
+        $this->expectExceptionMessageRegExpCompat('\Exception', '/Wrong composer dir is requested:.*/');
+        $params = new ComposerWrapperParams();
+        self::callNonPublic($params, 'setComposerDir', array($dir->url()));
     }
 
     /**
